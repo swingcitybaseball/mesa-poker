@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { nuevaMano, actuar, boteVivo, opcionesSubida, posDeAsiento, siguienteBoton, MESA9, MESA6 } from "./poker";
+import { nuevaMano, actuar, boteVivo, opcionesSubida, redondearApuesta, posDeAsiento, siguienteBoton, MESA9, MESA6 } from "./poker";
 
 const S13 = { nombre: "1/3", sb: 1, bb: 3 };
 const turno = (m: ReturnType<typeof nuevaMano>) => m.jugadores[m.turno]?.pos;
@@ -254,5 +254,41 @@ describe("stacks distintos por jugador", () => {
     for (let i = 0; i < 5; i++) actuar(m, "fold");
     actuar(m, "call"); // BTN paga
     expect(m.jugadores[8].bet).toBe(40);
+  });
+});
+
+describe("montos redondos", () => {
+  it("redondea al escalón que se usa en mesa", () => {
+    expect(redondearApuesta(23, 3)).toBe(25);
+    expect(redondearApuesta(35, 3)).toBe(35);
+    expect(redondearApuesta(47, 3)).toBe(50);
+    expect(redondearApuesta(163, 3)).toBe(175);
+    expect(redondearApuesta(418, 3)).toBe(400);
+  });
+
+  it("montos chicos van de cinco en cinco", () => {
+    expect(redondearApuesta(7, 3)).toBe(5);
+    expect(redondearApuesta(13, 3)).toBe(15);
+  });
+
+  it("las opciones postflop salen redondas", () => {
+    const m = nuevaMano(MESA9, "BTN", 300, S13);
+    for (let i = 0; i < 6; i++) actuar(m, "fold");
+    actuar(m, "raise", 15);
+    actuar(m, "fold");
+    actuar(m, "call"); // bote 31, al flop
+    expect(m.calle).toBe(1);
+    const o = opcionesSubida(m).filter((x) => x.etiqueta !== "All-in");
+    for (const x of o) expect(x.monto % 5).toBe(0);
+  });
+
+  it("no repite el mismo monto dos veces", () => {
+    const m = nuevaMano(MESA9, "BTN", 300, S13);
+    for (let i = 0; i < 6; i++) actuar(m, "fold");
+    actuar(m, "raise", 12);
+    actuar(m, "fold");
+    actuar(m, "call");
+    const montos = opcionesSubida(m).map((x) => x.monto);
+    expect(new Set(montos).size).toBe(montos.length);
   });
 });

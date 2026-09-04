@@ -40,7 +40,8 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: (avanza
   const [nota, setNota] = useState("");
   const [custom, setCustom] = useState("");
   const [err, setErr] = useState("");
-  const [hist, setHist] = useState<{ n: number; estado: string }[]>([]);
+  const [hist, setHist] = useState<{ n: number; pos: Pos | null; estado: string }[]>([]);
+  const [panel, setPanel] = useState<Pos | null>(null);
   const [ganador, setGanador] = useState<Pos | null>(null);
   const ocultarPref = useLiveQuery(async () => (await db.ajustes.get("ocultarCartas"))?.valor === "1", []) ?? false;
   const [espiando, setEspiando] = useState(false);
@@ -86,7 +87,8 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: (avanza
 
   const pot = boteVivo(m);
 
-  const snap = () => setHist((h) => [...h.slice(-60), { n: m.log.length, estado: JSON.stringify(m) }]);
+  const snap = () =>
+    setHist((h) => [...h.slice(-60), { n: m.log.length, pos: m.turno >= 0 ? m.jugadores[m.turno].pos : null, estado: JSON.stringify(m) }]);
   const deshacer = () => {
     const h = [...hist];
     const last = h.pop();
@@ -97,15 +99,35 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: (avanza
     setErr("");
   };
 
-  /** Rebobina hasta justo antes de la línea `i` del historial. */
-  const rebobinar = (i: number) => {
-    const k = hist.findIndex((x) => x.n === i);
-    if (k < 0) return;
+  const restaurar = (k: number) => {
     setM(JSON.parse(hist[k].estado));
     setHist(hist.slice(0, k));
     setGanador(null);
     setRevelado({});
     setErr("");
+    setPanel(null);
+  };
+
+  /** Rebobina hasta justo antes de la línea `i` del historial. */
+  const rebobinar = (i: number) => {
+    const k = hist.findIndex((x) => x.n === i);
+    if (k >= 0) restaurar(k);
+  };
+
+  /** Rebobina hasta justo antes de la última acción de ese jugador. */
+  const corregirA = (pos: Pos) => {
+    for (let k = hist.length - 1; k >= 0; k--) if (hist[k].pos === pos) return restaurar(k);
+  };
+  const puedeCorregir = (pos: Pos) => hist.some((x) => x.pos === pos);
+
+  /** Ajusta el stack de un jugador en medio de la mano. */
+  const ajustarStack = (pos: Pos, valor: number) => {
+    const n = structuredClone(m);
+    const j = n.jugadores.find((p) => p.pos === pos);
+    if (!j) return;
+    j.stack = Math.max(0, valor);
+    j.allIn = j.stack === 0 && j.bet > 0;
+    setM(n);
   };
 
   const aplicar = (accion: "fold" | "check" | "call" | "raise", monto = 0) => {
@@ -266,6 +288,7 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: (avanza
         asientos={asientos}
         ancla={idxHero}
         turno={m.turno}
+        onTap={(pos) => setPanel(panel === pos ? null : pos)}
         height={370}
         vertical
         centro={
@@ -311,6 +334,54 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: (avanza
           </>
         }
       />
+
+      <p className="dim" style={{ fontSize: 12, textAlign: "center", margin: "10px 0 12px", lineHeight: 1.6 }}>
+        Toca a cualquier jugador para corregir su acción o su stack
+      </p>
+
+      {panel && (() => {
+        const j = m.jugadores.find((p) => p.pos === panel)!;
+        const ultima = [...m.log].reverse().find((l) => l.startsWith(panel + " "));
+        return (
+          <div className="card" style={{ borderColor: "rgba(201,162,83,.45)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <span style={{ fontSize: 17, fontWeight: 700 }}>
+                {panel}{j.hero ? " · tú" : ""}
+                {j.folded ? <span className="dim" style={{ fontSize: 13, fontWeight: 400 }}> · foldeó</span> : null}
+              </span>
+              <button className="dim" style={{ fontSize: 13 }} onClick={() => setPanel(null)}>Cerrar</button>
+            </div>
+
+            <p className="mut" style={{ fontSize: 13, margin: "0 0 12px", lineHeight: 1.6 }}>
+              {ultima ? "Lo último: " + ultima : "Todavía no ha hecho nada esta mano."}
+              {j.bet > 0 ? ` · lleva ${money(j.bet)} en esta calle` : ""}
+            </p>
+
+            <p className="lab">Su stack</p>
+            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+              <input className="inp" type="number" inputMode="decimal" style={{ flex: 1 }}
+                defaultValue={Math.round(j.stack)}
+                onBlur={(e) => { const v = Number(e.target.value); if (!isNaN(v)) ajustarStack(panel, v); }} />
+              <button className="btn" style={{ width: "auto", padding: "0 18px" }}
+                onClick={() => setPanel(null)}>Listo</button>
+            </div>
+
+            <button className="btn ghost" disabled={!puedeCorregir(panel)}
+              style={puedeCorregir(panel) ? undefined : { opacity: 0.4 }}
+              onClick={() => corregirA(panel)}>
+              {puedeCorregir(panel)
+                ? "Corregir desde su última acción"
+                : "No hay acción suya que corregir"}
+            </button>
+            {puedeCorregir(panel) && (
+              <p className="dim" style={{ fontSize: 12, margin: "10px 0 0", lineHeight: 1.6 }}>
+                La mano regresa a justo antes de que él hablara. El bote y los stacks se
+                recalculan solos, y sigues desde ahí.
+              </p>
+            )}
+          </div>
+        );
+      })()}
 
       {/* mis cartas */}
       <div className="card" style={{ marginTop: 12 }}>
@@ -506,7 +577,7 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: (avanza
       )}
 
       <div className="card" style={{ marginBottom: 0 }}>
-        <p className="lab">Lo que pasó — toca una línea para volver ahí</p>
+        <p className="lab">Lo que pasó · toca una línea para volver ahí</p>
         {m.log.map((l, i) => {
           const puede = hist.some((x) => x.n === i);
           return (
@@ -521,7 +592,7 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: (avanza
                 background: "transparent",
                 color: i === m.log.length - 1 ? "var(--bone)" : "var(--muted)",
                 cursor: puede ? "pointer" : "default",
-                border: "1px solid transparent",
+                border: `1px solid ${puede ? "var(--line)" : "transparent"}`,
               }}
               onMouseOver={(e) => { if (puede) e.currentTarget.style.borderColor = "var(--line2)"; }}
               onMouseOut={(e) => (e.currentTarget.style.borderColor = "transparent")}

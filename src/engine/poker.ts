@@ -225,6 +225,23 @@ export function actuar(m: Mano, accion: Accion, monto = 0): Mano {
   return m;
 }
 
+/**
+ * En vivo nadie apuesta $23: se apuesta $25. Redondea al escalón que de
+ * verdad se usa en la mesa, según el tamaño del bote y de la ciega.
+ */
+export function escalon(monto: number, bb: number): number {
+  if (monto >= 1000) return 100;
+  if (monto >= 400) return 50;
+  if (monto >= 150) return 25;
+  if (monto >= 40) return 10;
+  return Math.max(5, bb);
+}
+
+export function redondearApuesta(monto: number, bb: number): number {
+  const e = escalon(monto, bb);
+  return Math.max(e, Math.round(monto / e) * e);
+}
+
 /** Opciones rápidas de subida según contexto. Devuelve montos "subir a". */
 export function opcionesSubida(m: Mano): { etiqueta: string; monto: number }[] {
   if (m.turno < 0) return [];
@@ -259,9 +276,16 @@ export function opcionesSubida(m: Mano): { etiqueta: string; monto: number }[] {
       { etiqueta: "Bote", monto: m.apuesta + pot + falta },
     ];
   }
+  const esPreflopAbierto = m.calle === 0 && m.apuesta === bb;
   o = o
-    .map((x) => ({ ...x, monto: Math.round(x.monto) }))
+    // Preflop los múltiplos de ciega ya son redondos; postflop hay que redondear.
+    .map((x) => ({ ...x, monto: esPreflopAbierto ? Math.round(x.monto) : redondearApuesta(x.monto, bb) }))
     .filter((x) => x.monto > m.apuesta && x.monto < max);
+
+  // Dos porcentajes distintos pueden caer en el mismo monto redondo.
+  const vistos = new Set<number>();
+  o = o.filter((x) => (vistos.has(x.monto) ? false : (vistos.add(x.monto), true)));
+
   o.push({ etiqueta: "All-in", monto: max });
   return o;
 }
