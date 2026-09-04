@@ -8,6 +8,7 @@ import {
 } from "../../engine/poker";
 import { ganadores as calcularGanadores } from "../../engine/evaluador";
 import { Mesa, Carta, money } from "../../ui";
+import { Pila } from "../../ui/Fichas";
 import { Picker } from "../../ui/Picker";
 
 type PickSlot = { t: "mia"; i: number } | { t: "board"; i: number } | { t: "sd"; pos: Pos; i: number } | null;
@@ -153,6 +154,7 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: (avanza
       })),
       ganador: (ganador ?? m.ganador) ?? undefined,
     });
+    await db.sesiones.update(s.id!, { fichas: Math.max(0, (s.fichas ?? 0) + netoMano) });
     onSalir(true);
   };
 
@@ -248,8 +250,11 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: (avanza
                 );
               })}
             </div>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 4 }}>
+              <Pila monto={pot} size={15} max={4} />
+            </div>
             <p className="sub" style={{ margin: 0 }}>Bote</p>
-            <p className="disp" style={{ fontSize: 28, margin: 0, color: "var(--brass)" }}>{money(pot)}</p>
+            <p className="disp" style={{ fontSize: 27, margin: 0, color: "var(--brass)" }}>{money(pot)}</p>
           </>
         }
       />

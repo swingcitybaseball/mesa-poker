@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, neto } from "./db";
+import { db, netoVivo } from "./db";
 import { money } from "./ui";
 import Inicio from "./features/inicio/Inicio";
 import ManoTab from "./features/mano/ManoTab";
@@ -25,7 +25,7 @@ export default function App() {
   const sesiones = useLiveQuery(() => db.sesiones.toArray(), []) ?? [];
   const bankrollInicial =
     useLiveQuery(async () => Number((await db.ajustes.get("bankrollInicial"))?.valor ?? 0), []) ?? 0;
-  const bankroll = bankrollInicial + sesiones.filter((s) => s.fin).reduce((a, s) => a + neto(s), 0);
+  const bankroll = bankrollInicial + sesiones.reduce((a, s) => a + netoVivo(s), 0);
   const activa = sesiones.find((s) => !s.fin) ?? null;
 
   return (

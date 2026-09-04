@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { db, type Sesion } from "../../db";
+import { db, invertido, netoVivo, type Sesion } from "../../db";
 import ManoEnVivo from "./ManoEnVivo";
 import { posDeAsiento, siguienteBoton, anteriorBoton } from "../../engine/poker";
 import { Mesa, CORTA, money } from "../../ui";
+import { Pila } from "../../ui/Fichas";
 import { Reloj } from "../tracking/Tracking";
 import type { Tab } from "../../App";
 
@@ -39,7 +40,7 @@ export default function ManoTab({ activa, ir }: { activa: Sesion | null; ir: (t:
       />
     );
 
-  const invertido = s.compras.reduce((a, c) => a + c.monto, 0);
+
   
   const hablanDespues = (s.botonAsiento - s.heroAsiento + n) % n;
 
@@ -97,9 +98,18 @@ export default function ManoTab({ activa, ir }: { activa: Sesion | null; ir: (t:
       </div>
 
       <div className="hud-strip">
+        <div>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 5 }}>
+            <Pila monto={s.fichas ?? 0} size={13} max={3} />
+          </div>
+          <p className="v">{money(s.fichas ?? 0)}</p><p className="k">Fichas</p>
+        </div>
+        <div>
+          <p className={"v " + (netoVivo(s) >= 0 ? "sage" : "red")}>{money(netoVivo(s))}</p>
+          <p className="k">Vas</p>
+        </div>
+        <div><p className="v">{money(invertido(s))}</p><p className="k">Invertido</p></div>
         <div><p className="v">{s.manosJugadas}</p><p className="k">Manos</p></div>
-        <div><p className="v">{money(invertido)}</p><p className="k">Invertido</p></div>
-        <div><p className="v">{n}</p><p className="k">En mesa</p></div>
       </div>
 
       <p className="dim" style={{ fontSize: 12, textAlign: "center", margin: "14px 0 0", lineHeight: 1.6 }}>

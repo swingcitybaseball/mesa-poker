@@ -51,6 +51,8 @@ export interface Sesion {
   heroAsiento: number;
   botonAsiento: number;
   juego: "NLH" | "PLO";
+  /** Fichas que tienes en la mesa ahorita. Se ajusta con cada mano registrada. */
+  fichas: number;
   manosJugadas: number;
 }
 
@@ -121,6 +123,21 @@ class MesaDB extends Dexie {
 
   constructor() {
     super("mesa");
+    this.version(3).stores({
+      stakes: "id, orden",
+      lugares: "++id, nombre",
+      rivales: "++id, lugarId, apodo",
+      sesiones: "++id, inicio, fin, stakeId, lugar",
+      manos: "++id, sesionId, ts, pos, rivalTipo, rivalId",
+      estudio: "++id, fecha",
+      ajustes: "clave",
+    }).upgrade(async (tx) => {
+      await tx.table("sesiones").toCollection().modify((s: any) => {
+        if (s.fichas == null) {
+          s.fichas = s.fin ? (s.cashOut ?? 0) : (s.compras ?? []).reduce((a: number, c: any) => a + c.monto, 0);
+        }
+      });
+    });
     this.version(2).stores({
       stakes: "id, orden",
       lugares: "++id, nombre",
@@ -170,6 +187,8 @@ export async function semilla() {
 /* helpers */
 export const invertido = (s: Sesion) => s.compras.reduce((a, c) => a + c.monto, 0);
 export const neto = (s: Sesion) => (s.fin ? s.cashOut - invertido(s) : 0);
+/** Resultado en curso de una sesión abierta: fichas en mesa menos lo invertido. */
+export const netoVivo = (s: Sesion) => (s.fin ? neto(s) : (s.fichas ?? invertido(s)) - invertido(s));
 export const horas = (s: Sesion) =>
   Math.max(0, ((s.fin ? new Date(s.fin) : new Date()).getTime() - new Date(s.inicio).getTime()) / 36e5);
 

@@ -1,4 +1,4 @@
-import { neto, horas, type Sesion } from "../../db";
+import { neto, netoVivo, horas, type Sesion } from "../../db";
 import { posDeAsiento } from "../../engine/poker";
 import { money, duracion, fecha } from "../../ui";
 import type { Tab } from "../../App";
@@ -14,7 +14,14 @@ export default function Inicio({ activa, sesiones, ir }: { activa: Sesion | null
       {activa ? (
         <div className="card" style={{ borderColor: "rgba(201,162,83,.4)" }}>
           <p className="lab">Sesión en curso</p>
-          <p style={{ fontSize: 16, margin: "0 0 12px" }}>{activa.lugar || "En juego"} · {activa.stakeId} · estás en <b className="brass">{posDeAsiento(activa.heroAsiento, activa.botonAsiento, activa.nJugadores)}</b></p>
+          <p style={{ fontSize: 16, margin: "0 0 6px" }}>
+            {activa.lugar || "En juego"} · {activa.stakeId} · estás en{" "}
+            <b className="brass">{posDeAsiento(activa.heroAsiento, activa.botonAsiento, activa.nJugadores)}</b>
+          </p>
+          <p className="sub" style={{ margin: "0 0 2px" }}>Vas</p>
+          <p className={"disp stat " + (netoVivo(activa) >= 0 ? "sage" : "red")} style={{ marginBottom: 14 }}>
+            {money(netoVivo(activa))}
+          </p>
           <button className="btn" onClick={() => ir("mano")}>Abrir HUD</button>
         </div>
       ) : (

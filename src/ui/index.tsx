@@ -1,4 +1,5 @@
 import type { Pos } from "../engine/poker";
+import { Pila } from "./Fichas";
 
 export const DESC: Record<Pos, string> = {
   SB: "Ciega chica. Estás a la izquierda del repartidor y pones dinero antes de ver tus cartas. Después del flop hablas de primero toda la mano.",
@@ -155,8 +156,13 @@ export function Mesa({
               <div style={{ fontSize: 9, opacity: 0.8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.etiqueta}</div>
             ) : null}
             {a.bet ? (
-              <div style={{ position: "absolute", left: "50%", bottom: -16, transform: "translateX(-50%)",
-                fontSize: 10, color: "var(--sage)", fontWeight: 500, whiteSpace: "nowrap" }}>${Math.round(a.bet)}</div>
+              <div style={{ position: "absolute", left: "50%", bottom: -19, transform: "translateX(-50%)",
+                display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
+                <Pila monto={a.bet} size={11} max={3} />
+                <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--sage)", fontWeight: 500 }}>
+                  ${Math.round(a.bet)}
+                </span>
+              </div>
             ) : null}
           </button>
         );

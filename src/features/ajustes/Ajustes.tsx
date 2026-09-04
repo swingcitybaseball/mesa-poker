@@ -8,7 +8,7 @@ const MODELOS: [string, string][] = [
   ["claude-haiku-4-5-20251001", "Haiku 4.5"],
 ];
 
-export const VERSION = "0.7.0";
+export const VERSION = "1.0.0";
 
 export default function Ajustes({ onCerrar }: { onCerrar: () => void }) {
   const guardado = useLiveQuery(async () => ({

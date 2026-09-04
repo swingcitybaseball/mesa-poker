@@ -3,6 +3,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db, invertido, neto, horas, type Sesion, type Mano } from "../../db";
 import { Carta, money, fecha, duracion } from "../../ui";
 import { analizarMano, narrarMano, analizarSesion } from "../../lib/claude";
+import ReplayMano from "./ReplayMano";
 
 const fmt = (t: string) =>
   t.split(/(\*\*[^*]+\*\*)/g).map((p, i) =>
@@ -59,7 +60,11 @@ export default function SesionDetalle({ s, onCerrar }: { s: Sesion; onCerrar: ()
                     {m.cartas.map((c, i) => <Carta key={i} c={c} size="xs" />)}
                   </div>
                   <div style={{ minWidth: 0, marginLeft: 4 }}>
-                    <div style={{ fontSize: 13 }}>{m.pos}{m.straddle ? " · straddle" : ""}</div>
+                    <div style={{ fontSize: 13 }}>
+                      <b className="brass">{m.pos}</b>
+                      <span className="dim"> · tú</span>
+                      {m.straddle ? <span className="dim"> · straddle</span> : null}
+                    </div>
                     <div className="sub" style={{ margin: "1px 0 0" }}>
                       {m.board.filter((c) => c !== "??").join(" ") || "sin board"}{m.nota ? " · con nota" : ""}
                     </div>
@@ -108,7 +113,7 @@ export default function SesionDetalle({ s, onCerrar }: { s: Sesion; onCerrar: ()
 }
 
 function DetalleMano({ m, s }: { m: Mano; s: Sesion }) {
-  const [tab, setTab] = useState<"accion" | "analisis" | "narracion">("accion");
+  const [tab, setTab] = useState<"replay" | "accion" | "analisis" | "narracion">("replay");
   const [analisis, setAnalisis] = useState("");
   const [narracion, setNarracion] = useState(m.narracion ?? "");
   const [cargando, setCargando] = useState(false);
@@ -132,10 +137,13 @@ function DetalleMano({ m, s }: { m: Mano; s: Sesion }) {
   return (
     <div style={{ background: "var(--surf2)", borderRadius: 10, padding: 14, margin: "4px 0 12px" }}>
       <div className="row" style={{ marginBottom: 12 }}>
+        <button className={"chip" + (tab === "replay" ? " on" : "")} onClick={() => setTab("replay")}>Replay</button>
         <button className={"chip" + (tab === "accion" ? " on" : "")} onClick={() => setTab("accion")}>Acción</button>
         <button className={"chip" + (tab === "analisis" ? " on" : "")} onClick={() => analisis ? setTab("analisis") : pedir("analisis")}>Análisis</button>
         <button className={"chip" + (tab === "narracion" ? " on" : "")} onClick={() => narracion ? setTab("narracion") : pedir("narracion")}>Narración</button>
       </div>
+
+      {tab === "replay" && <ReplayMano m={m} s={s} />}
 
       {tab === "accion" && (
         <>
@@ -169,7 +177,7 @@ function DetalleMano({ m, s }: { m: Mano; s: Sesion }) {
         </>
       )}
 
-      {tab !== "accion" && (
+      {(tab === "analisis" || tab === "narracion") && (
         cargando ? <p className="mut" style={{ fontSize: 14 }}>Pensando…</p>
         : texto ? (
           <>

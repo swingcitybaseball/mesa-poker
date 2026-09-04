@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, invertido, neto, horas, type Sesion } from "../../db";
+import { db, invertido, neto, netoVivo, horas, type Sesion } from "../../db";
 import { posDeAsiento } from "../../engine/poker";
 import { Mesa, Chip, DESC, money, fecha, duracion } from "../../ui";
 
@@ -26,7 +26,7 @@ function Nueva({ sesiones, verDetalle }: { sesiones: Sesion[]; verDetalle: (id: 
     await db.sesiones.add({
       inicio: new Date().toISOString(), fin: null, lugar: lugar.trim(), stakeId, nJugadores: nJug,
       compras: [{ monto: b, ts: new Date().toISOString() }], cashOut: 0, notas: "",
-      heroAsiento: asiento, botonAsiento: (asiento - 1 + nJug) % nJug, juego, manosJugadas: 0,
+      heroAsiento: asiento, botonAsiento: (asiento - 1 + nJug) % nJug, juego, fichas: b, manosJugadas: 0,
     });
   };
 
@@ -98,19 +98,25 @@ function Nueva({ sesiones, verDetalle }: { sesiones: Sesion[]; verDetalle: (id: 
 function Activa({ s }: { s: Sesion }) {
   const [cerrando, setCerrando] = useState(false);
   const [cashOut, setCashOut] = useState("");
+  const [editaFichas, setEditaFichas] = useState(false);
+  const [fichasTxt, setFichasTxt] = useState("");
   const [recompra, setRecompra] = useState(false);
   const [montoRe, setMontoRe] = useState("300");
   const manos = useLiveQuery(() => db.manos.where("sesionId").equals(s.id!).count(), [s.id]) ?? 0;
+  void manos;
 
   const cerrar = async () => {
-    const c = parseFloat(cashOut);
+    const c = parseFloat(cashOut === "" ? String(s.fichas ?? 0) : cashOut);
     if (isNaN(c) || c < 0) return;
     await db.sesiones.update(s.id!, { cashOut: c, fin: new Date().toISOString() });
   };
   const agregarRecompra = async () => {
     const n = parseFloat(montoRe);
     if (!n || n <= 0) return;
-    await db.sesiones.update(s.id!, { compras: [...s.compras, { monto: n, ts: new Date().toISOString() }] });
+    await db.sesiones.update(s.id!, {
+      compras: [...s.compras, { monto: n, ts: new Date().toISOString() }],
+      fichas: (s.fichas ?? 0) + n,
+    });
     setRecompra(false);
   };
 
@@ -121,7 +127,14 @@ function Activa({ s }: { s: Sesion }) {
         <p className="disp big"><Reloj inicio={s.inicio} /></p>
         <div className="divide" style={{ display: "flex" }}>
           <div style={{ flex: 1 }}><p className="disp stat">{money(invertido(s))}</p><p className="sub">Invertido</p></div>
-          <div style={{ flex: 1, borderLeft: "1px solid var(--line)" }}><p className="disp stat">{manos}</p><p className="sub">Manos registradas</p></div>
+          <div style={{ flex: 1, borderLeft: "1px solid var(--line)", cursor: "pointer" }}
+            onClick={() => { setFichasTxt(String(Math.round(s.fichas ?? 0))); setEditaFichas(true); }}>
+            <p className="disp stat">{money(s.fichas ?? 0)}</p><p className="sub">Fichas · tocar</p>
+          </div>
+          <div style={{ flex: 1, borderLeft: "1px solid var(--line)" }}>
+            <p className={"disp stat " + (netoVivo(s) >= 0 ? "sage" : "red")}>{money(netoVivo(s))}</p>
+            <p className="sub">Vas</p>
+          </div>
         </div>
       </div>
 
@@ -142,6 +155,23 @@ function Activa({ s }: { s: Sesion }) {
         <button className="btn ghost" onClick={() => setCerrando(!cerrando)}>Cerrar sesión</button>
       </div>
 
+      {editaFichas && (
+        <div className="card">
+          <p className="lab">¿Cuántas fichas tienes ahorita?</p>
+          <p className="mut" style={{ fontSize: 13, lineHeight: 1.6, margin: "0 0 10px" }}>
+            Se ajusta sola con cada mano que registras. Corrígela si se desfasó.
+          </p>
+          <input className="inp" type="number" inputMode="decimal" value={fichasTxt}
+            onChange={(e) => setFichasTxt(e.target.value)} style={{ marginBottom: 10 }} />
+          <button className="btn" onClick={async () => {
+            const n = parseFloat(fichasTxt);
+            if (isNaN(n) || n < 0) return;
+            await db.sesiones.update(s.id!, { fichas: n });
+            setEditaFichas(false);
+          }}>Guardar</button>
+        </div>
+      )}
+
       {recompra && (
         <div className="card">
           <p className="lab">¿De cuánto?</p>
@@ -153,7 +183,8 @@ function Activa({ s }: { s: Sesion }) {
       {cerrando && (
         <div className="card">
           <p className="lab">¿Con cuánto te levantaste?</p>
-          <input className="inp" type="number" inputMode="decimal" placeholder="Fichas al salir" value={cashOut}
+          <input className="inp" type="number" inputMode="decimal" placeholder="Fichas al salir"
+            value={cashOut === "" ? String(Math.round(s.fichas ?? 0)) : cashOut}
             onChange={(e) => setCashOut(e.target.value)} style={{ marginBottom: 10 }} />
           <button className="btn" onClick={cerrar}>Cerrar y guardar</button>
         </div>
