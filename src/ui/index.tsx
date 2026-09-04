@@ -64,7 +64,11 @@ export interface Asiento {
   bet?: number;
   folded?: boolean;
   allIn?: boolean;
-  etiqueta?: string; // apodo del rival, si hay
+  etiqueta?: string;
+  /** Cartas visibles en el asiento (las tuyas, o las de un rival en showdown). */
+  cartas?: (string | null)[];
+  /** En el HUD: si este asiento habla antes o después de ti. */
+  orden?: "antes" | "despues";
 }
 
 /**
@@ -83,9 +87,9 @@ export function Mesa({
   centro?: React.ReactNode;
 }) {
   const n = asientos.length;
+  const ang = (i: number) => Math.PI / 2 + (((i - ancla + n) % n) * 2 * Math.PI) / n;
   const xy = (i: number, rx: number, ry: number) => {
-    const j = (i - ancla + n) % n;
-    const t = Math.PI / 2 + (j * 2 * Math.PI) / n;
+    const t = ang(i);
     return [50 + rx * Math.cos(t), 50 + ry * Math.sin(t)];
   };
   return (
@@ -111,7 +115,13 @@ export function Mesa({
       {asientos.map((a, i) => {
         const [x, y] = xy(i, 40, 34);
         const on = seleccionada === a.pos || turno === i;
-        const cls = "seat" + (on ? " on" : "") + (a.hero ? " hero" : "") + (a.folded ? " out" : "");
+        const cls =
+          "seat" +
+          (on ? " on" : "") +
+          (a.hero ? " hero" : "") +
+          (a.folded ? " out" : "") +
+          (!on && a.orden === "antes" ? " antes" : "") +
+          (!on && a.orden === "despues" ? " despues" : "");
         return (
           <button
             key={a.pos}
@@ -134,6 +144,31 @@ export function Mesa({
                 fontSize: 10, color: "var(--sage)", fontWeight: 500, whiteSpace: "nowrap" }}>${Math.round(a.bet)}</div>
             ) : null}
           </button>
+        );
+      })}
+      {asientos.map((a, i) => {
+        if (!a.cartas || !a.cartas.some(Boolean)) return null;
+        const [x, y] = xy(i, 40, 34);
+        const abajo = Math.sin(ang(i)) > 0;
+        return (
+          <div
+            key={"c" + a.pos}
+            style={{
+              position: "absolute",
+              left: `${x}%`,
+              top: `${y}%`,
+              transform: `translate(-50%, -50%) translateY(${abajo ? -38 : 38}px)`,
+              display: "flex",
+              gap: 3,
+              zIndex: 5,
+              opacity: a.folded ? 0.35 : 1,
+              pointerEvents: "none",
+            }}
+          >
+            {a.cartas.map((c, k) => (
+              <Carta key={k} c={c ?? null} size="xs" />
+            ))}
+          </div>
         );
       })}
     </div>

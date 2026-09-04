@@ -58,6 +58,22 @@ nav.tabs button.on { color: var(--bone); border-top-color: var(--brass); }
 .seat.on { background: var(--brass); border-color: var(--brass); color: #151311; font-weight: 600; }
 .seat.hero { border-color: rgba(201,162,83,.55); }
 .seat.out { opacity: .3; }
+.seat.antes { opacity: .45; }
+.seat.despues { border-color: rgba(201,162,83,.32); }
+.tbl::after { content: ""; position: absolute; inset: 11%; border-radius: 50%/34%;
+  border: 1px solid rgba(58,92,76,.45); pointer-events: none; }
+.seat.on { box-shadow: 0 0 0 3px rgba(201,162,83,.22); }
+.hud-pos { font-size: 64px; line-height: .92; margin: 0; color: var(--brass); }
+.hud-card { background: var(--surf); border: 1px solid var(--line); border-radius: 16px;
+  padding: 20px 16px; text-align: center; margin-bottom: 12px; }
+.hud-strip { display: flex; background: var(--surf); border: 1px solid var(--line);
+  border-radius: 14px; overflow: hidden; }
+.hud-strip > div { flex: 1; padding: 13px 6px; text-align: center; }
+.hud-strip > div + div { border-left: 1px solid var(--line); }
+.hud-strip .v { font-family: var(--serif); font-size: 20px; line-height: 1; }
+.hud-strip .k { font-size: 11px; color: var(--dim); margin-top: 5px; }
+.btn.grande { padding: 18px; font-size: 16px; min-height: 58px; border-radius: 14px; }
+.btn:active { transform: scale(.985); }
 .mkr { pointer-events: none; position: absolute; transform: translate(-50%,-50%); width: 24px; height: 24px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; z-index: 3; }
 .crd { border-radius: 5px; display: inline-flex; flex-direction: column; align-items: center; justify-content: center;

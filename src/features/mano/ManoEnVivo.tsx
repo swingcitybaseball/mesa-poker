@@ -45,7 +45,7 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: () => v
   const req = cartasRequeridas(m.calle);
   const puestas = m.board.filter((c) => c && c !== "??").length;
   const faltanCartas = puestas < req;
-  const ranuras = Math.max(req, m.board.length);
+
   const pot = boteVivo(m);
 
   const snap = () => setHist((h) => [...h.slice(-40), JSON.stringify(m)]);
@@ -127,6 +127,11 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: () => v
 
   const asientos = m.jugadores.map((p) => ({
     pos: p.pos, hero: p.hero, stack: p.stack, bet: p.bet, folded: p.folded, allIn: p.allIn,
+    cartas: p.hero
+      ? mias
+      : revelado[p.pos] && !revelado[p.pos].muck
+        ? revelado[p.pos].cartas
+        : undefined,
   }));
 
   if (!arrancada) {
@@ -174,25 +179,44 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: () => v
         asientos={asientos}
         ancla={idxHero}
         turno={m.turno}
-        height={268}
+        height={290}
         centro={
           <>
-            <div style={{ display: "flex", gap: 5, justifyContent: "center", marginBottom: 10, minHeight: 42 }}>
-              {Array.from({ length: ranuras }).map((_, i) => {
+            <div style={{ display: "flex", gap: 5, justifyContent: "center", marginBottom: 12 }}>
+              {Array.from({ length: 5 }).map((_, i) => {
                 const c = m.board[i];
+                const puesta = c && c !== "??";
+                const activaCalle = i < req;
+                if (puesta)
+                  return (
+                    <Carta key={i} c={c} size="sm"
+                      activa={pick?.t === "board" && pick.i === i}
+                      onClick={m.calle > 0 && m.calle < 4 ? () => setPick({ t: "board", i }) : undefined} />
+                  );
                 return (
-                  <Carta
+                  <button
                     key={i}
-                    c={c && c !== "??" ? c : null}
-                    size="sm"
-                    activa={pick?.t === "board" && pick.i === i}
-                    onClick={m.calle > 0 && m.calle < 4 ? () => setPick({ t: "board", i }) : undefined}
-                  />
+                    type="button"
+                    disabled={!activaCalle || m.calle === 0 || m.calle >= 4}
+                    onClick={() => setPick({ t: "board", i })}
+                    style={{
+                      width: 30, height: 42, borderRadius: 5,
+                      border: `1px ${activaCalle ? "solid" : "dashed"} ${
+                        pick?.t === "board" && pick.i === i ? "var(--brass)" : activaCalle ? "var(--line2)" : "rgba(58,92,76,.5)"
+                      }`,
+                      background: activaCalle ? "rgba(242,237,227,.06)" : "transparent",
+                      color: activaCalle ? "var(--muted)" : "transparent",
+                      fontSize: 15, lineHeight: 1, padding: 0,
+                      boxShadow: pick?.t === "board" && pick.i === i ? "0 0 0 2px var(--brass)" : undefined,
+                    }}
+                  >
+                    {activaCalle ? "+" : ""}
+                  </button>
                 );
               })}
             </div>
             <p className="sub" style={{ margin: 0 }}>Bote</p>
-            <p className="disp" style={{ fontSize: 26, margin: 0, color: "var(--brass)" }}>{money(pot)}</p>
+            <p className="disp" style={{ fontSize: 28, margin: 0, color: "var(--brass)" }}>{money(pot)}</p>
           </>
         }
       />
@@ -201,13 +225,15 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: () => v
       <div className="card" style={{ marginTop: 12 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <span className="lab" style={{ margin: 0 }}>Tengo</span>
+            <span className="lab" style={{ margin: 0 }}>Tus cartas</span>
             {[0, 1].map((i) => (
               <Carta key={i} c={mias[i]} activa={pick?.t === "mia" && pick.i === i}
                 onClick={() => setPick({ t: "mia", i })} />
             ))}
           </div>
-          <span className="dim" style={{ fontSize: 12 }}>{s.heroPos}</span>
+          <span className="dim" style={{ fontSize: 12 }}>
+            {mias.some(Boolean) ? "ya salen en la mesa" : "toca para ponerlas"}
+          </span>
         </div>
         {pick?.t === "mia" && <Picker usadas={usadas} onPick={ponerCarta} onCerrar={() => setPick(null)} />}
       </div>
