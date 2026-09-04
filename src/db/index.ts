@@ -90,6 +90,8 @@ export interface Mano {
   nota: string;
   etiquetas: Etiqueta[];
   straddle?: { pos: Pos; monto: number };
+  showdown?: { pos: Pos; cartas: (string | null)[]; muck: boolean }[];
+  ganador?: Pos;
   narracion?: string;
 }
 

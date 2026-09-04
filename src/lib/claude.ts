@@ -39,6 +39,13 @@ function describirMano(m: Mano, s: Sesion): string {
   if (m.board.length) L.push(`Board: ${m.board.filter((c) => c !== "??").join(" ") || "no se registró"}`);
   if (m.rivalTipo) L.push(`Tipo de rival principal: ${m.rivalTipo}`);
   if (m.log.length) L.push(`Secuencia de acción:\n${m.log.map((l) => "  " + l).join("\n")}`);
+  if (m.showdown?.length) {
+    const filas = m.showdown.map((r) =>
+      r.muck ? `  ${r.pos}: hizo muck` : `  ${r.pos}: ${r.cartas.filter(Boolean).join(" ") || "no se vieron sus cartas"}`
+    );
+    L.push(`Showdown:\n${filas.join("\n")}`);
+  }
+  if (m.ganador) L.push(`Ganó: ${m.ganador}`);
   L.push(`Resultado: ${m.res}, neto ${m.neto >= 0 ? "+" : ""}$${Math.round(m.neto)}`);
   if (m.nota) L.push(`Lo que dudé: "${m.nota}"`);
   return L.join("\n");

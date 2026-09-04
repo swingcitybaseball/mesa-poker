@@ -147,6 +147,24 @@ function DetalleMano({ m, s }: { m: Mano; s: Sesion }) {
           {m.log.map((l, i) => (
             <p key={i} className="mut" style={{ fontSize: 13, margin: "0 0 5px", lineHeight: 1.5 }}>{l}</p>
           ))}
+          {m.showdown && m.showdown.length > 0 && (
+            <div style={{ marginTop: 12, borderTop: "1px solid var(--line)", paddingTop: 12 }}>
+              <p className="lab">Showdown</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <span style={{ fontSize: 12, width: 52 }} className={m.ganador === m.pos ? "sage" : "mut"}>
+                  {m.pos} · tú
+                </span>
+                <div style={{ display: "flex", gap: 3 }}>{m.cartas.map((c, i) => <Carta key={i} c={c} size="xs" />)}</div>
+              </div>
+              {m.showdown.map((r) => (
+                <div key={r.pos} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <span style={{ fontSize: 12, width: 52 }} className={m.ganador === r.pos ? "sage" : "mut"}>{r.pos}</span>
+                  {r.muck ? <span className="dim" style={{ fontSize: 13 }}>muck</span>
+                    : <div style={{ display: "flex", gap: 3 }}>{r.cartas.map((c, i) => <Carta key={i} c={c ?? null} size="xs" />)}</div>}
+                </div>
+              ))}
+            </div>
+          )}
           {m.nota && <p className="note" style={{ marginTop: 12 }}>{m.nota}</p>}
         </>
       )}

@@ -72,7 +72,7 @@ export interface Asiento {
  * En setup se ancla el BTN; en el HUD se ancla al hero.
  */
 export function Mesa({
-  asientos, ancla, seleccionada, turno, onTap, height = 240,
+  asientos, ancla, seleccionada, turno, onTap, height = 240, centro,
 }: {
   asientos: Asiento[];
   ancla: number;
@@ -80,6 +80,7 @@ export function Mesa({
   turno?: number;
   onTap?: (pos: Pos) => void;
   height?: number;
+  centro?: React.ReactNode;
 }) {
   const n = asientos.length;
   const xy = (i: number, rx: number, ry: number) => {
@@ -89,6 +90,12 @@ export function Mesa({
   };
   return (
     <div className="tbl" style={{ height }}>
+      {centro && (
+        <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
+          textAlign: "center", width: "78%", zIndex: 2 }}>
+          {centro}
+        </div>
+      )}
       {asientos.map((a, i) => {
         if (!["BTN", "SB", "BB"].includes(a.pos)) return null;
         const [x, y] = xy(i, 25, 21);

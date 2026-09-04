@@ -8,7 +8,8 @@ import {
 import { Mesa, Carta, money } from "../../ui";
 import { Picker } from "../../ui/Picker";
 
-type PickSlot = { t: "mia"; i: number } | { t: "board"; i: number } | null;
+type PickSlot = { t: "mia"; i: number } | { t: "board"; i: number } | { t: "sd"; pos: Pos; i: number } | null;
+type Revelado = { cartas: [string | null, string | null]; muck: boolean };
 
 export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: () => void }) {
   const mesa = s.nJugadores === 9 ? MESA9 : MESA6;
@@ -31,12 +32,20 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: () => v
   const [err, setErr] = useState("");
   const [hist, setHist] = useState<string[]>([]);
   const [ganador, setGanador] = useState<Pos | null>(null);
+  const [revelado, setRevelado] = useState<Record<string, Revelado>>({});
+  const rev = (pos: Pos): Revelado => revelado[pos] ?? { cartas: [null, null], muck: false };
 
-  const usadas = new Set([...mias.filter(Boolean), ...m.board] as string[]);
+  const usadas = new Set([
+    ...mias.filter(Boolean),
+    ...m.board.filter((c) => c && c !== "??"),
+    ...Object.values(revelado).flatMap((r) => r.cartas.filter(Boolean)),
+  ] as string[]);
   const idxHero = mesa.indexOf(s.heroPos);
   const act = m.turno >= 0 ? m.jugadores[m.turno] : null;
   const req = cartasRequeridas(m.calle);
-  const faltanCartas = m.board.length < req;
+  const puestas = m.board.filter((c) => c && c !== "??").length;
+  const faltanCartas = puestas < req;
+  const ranuras = Math.max(req, m.board.length);
   const pot = boteVivo(m);
 
   const snap = () => setHist((h) => [...h.slice(-40), JSON.stringify(m)]);
@@ -75,6 +84,14 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: () => v
 
   const ponerCarta = (c: string) => {
     if (!pick) return;
+    if (pick.t === "sd") {
+      const r = rev(pick.pos);
+      const cartas = [...r.cartas] as [string | null, string | null];
+      cartas[pick.i] = c;
+      setRevelado({ ...revelado, [pick.pos]: { cartas, muck: false } });
+      setPick(pick.i === 0 ? { t: "sd", pos: pick.pos, i: 1 } : null);
+      return;
+    }
     if (pick.t === "mia") {
       const n = [...mias] as [string | null, string | null];
       n[pick.i] = c;
@@ -82,9 +99,11 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: () => v
       setPick(pick.i === 0 ? { t: "mia", i: 1 } : null);
     } else {
       const b = [...m.board];
+      for (let i = 0; i < pick.i; i++) if (!b[i]) b[i] = "??";
       b[pick.i] = c;
       setM({ ...m, board: b });
-      setPick(pick.i < req - 1 ? { t: "board", i: pick.i + 1 } : null);
+      const siguienteVacia = Array.from({ length: req }).findIndex((_, i) => !b[i] || b[i] === "??");
+      setPick(siguienteVacia >= 0 ? { t: "board", i: siguienteVacia } : null);
     }
   };
 
@@ -98,6 +117,10 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: () => v
       pos: s.heroPos, cartas: mias, board: m.board, log: m.log,
       res: hero.folded ? "Foldeé" : netoMano >= 0 ? "Gané" : "Perdí",
       neto: netoMano, nota, etiquetas: [], straddle: str ?? undefined,
+      showdown: m.jugadores.filter((p) => !p.folded && !p.hero).map((p) => ({
+        pos: p.pos, cartas: rev(p.pos).cartas, muck: rev(p.pos).muck,
+      })),
+      ganador: (ganador ?? m.ganador) ?? undefined,
     });
     onSalir();
   };
@@ -147,16 +170,32 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: () => v
         </span>
       </div>
 
-      <div className="tbl" style={{ height: 268, position: "relative" }}>
-        <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", textAlign: "center", width: "76%" }}>
-          <div style={{ display: "flex", gap: 4, justifyContent: "center", marginBottom: 8, minHeight: 42 }}>
-            {m.board.map((c, i) => <Carta key={i} c={c} size="sm" />)}
-          </div>
-          <p className="sub" style={{ margin: 0 }}>Bote</p>
-          <p className="disp" style={{ fontSize: 24, margin: 0, color: "var(--brass)" }}>{money(pot)}</p>
-        </div>
-        <Mesa asientos={asientos} ancla={idxHero} turno={m.turno} height={268} />
-      </div>
+      <Mesa
+        asientos={asientos}
+        ancla={idxHero}
+        turno={m.turno}
+        height={268}
+        centro={
+          <>
+            <div style={{ display: "flex", gap: 5, justifyContent: "center", marginBottom: 10, minHeight: 42 }}>
+              {Array.from({ length: ranuras }).map((_, i) => {
+                const c = m.board[i];
+                return (
+                  <Carta
+                    key={i}
+                    c={c && c !== "??" ? c : null}
+                    size="sm"
+                    activa={pick?.t === "board" && pick.i === i}
+                    onClick={m.calle > 0 && m.calle < 4 ? () => setPick({ t: "board", i }) : undefined}
+                  />
+                );
+              })}
+            </div>
+            <p className="sub" style={{ margin: 0 }}>Bote</p>
+            <p className="disp" style={{ fontSize: 26, margin: 0, color: "var(--brass)" }}>{money(pot)}</p>
+          </>
+        }
+      />
 
       {/* mis cartas */}
       <div className="card" style={{ marginTop: 12 }}>
@@ -176,18 +215,22 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: () => v
       {/* board */}
       {faltanCartas && m.calle > 0 && m.calle < 4 && (
         <div className="card">
-          <p className="lab">Salió el {CALLES[m.calle].toLowerCase()}</p>
-          <div style={{ display: "flex", gap: 6 }}>
-            {Array.from({ length: req }).map((_, i) => (
-              <Carta key={i} c={m.board[i] ?? null} activa={pick?.t === "board" && pick.i === i}
-                onClick={() => setPick({ t: "board", i })} />
-            ))}
-          </div>
-          {pick?.t === "board" && <Picker usadas={usadas} onPick={ponerCarta} onCerrar={() => setPick(null)} />}
-          <button className="btn ghost" style={{ marginTop: 12 }}
-            onClick={() => { setM({ ...m, board: [...m.board, ...Array(req - m.board.length).fill("??")] }); setPick(null); }}>
-            No las vi — seguir
-          </button>
+          <p className="lab" style={{ marginBottom: pick?.t === "board" ? 0 : 10 }}>
+            Salió el {CALLES[m.calle].toLowerCase()} — toca las cartas en la mesa
+          </p>
+          {pick?.t === "board" ? (
+            <Picker usadas={usadas} onPick={ponerCarta} onCerrar={() => setPick(null)} />
+          ) : (
+            <button className="btn ghost" style={{ fontSize: 13 }}
+              onClick={() => {
+                const b = [...m.board];
+                for (let i = 0; i < req; i++) if (!b[i]) b[i] = "??";
+                setM({ ...m, board: b });
+                setPick(null);
+              }}>
+              No las vi — seguir sin cartas
+            </button>
+          )}
         </div>
       )}
 
@@ -246,22 +289,73 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: () => v
       {m.terminada && (
         <div className="card">
           {m.ganador ? (
-            <p className="disp" style={{ fontSize: 22, margin: "0 0 12px" }}>{m.ganador} gana {money(m.bote)}</p>
+            <>
+              <p className="lab">Todos foldearon</p>
+              <p className="disp" style={{ fontSize: 22, margin: "0 0 14px" }}>
+                {m.ganador === s.heroPos ? "Ganaste" : m.ganador + " gana"} {money(m.bote)}
+              </p>
+            </>
           ) : (
             <>
-              <p className="lab">Showdown — ¿quién ganó?</p>
-              <div className="row" style={{ marginBottom: 12 }}>
-                {m.jugadores.filter((p) => !p.folded).map((p) => (
-                  <button key={p.pos} className={"chip" + (ganador === p.pos ? " on" : "")} onClick={() => setGanador(p.pos)}>
-                    {p.pos}{p.hero ? " (tú)" : ""}
-                  </button>
-                ))}
-              </div>
+              <p className="lab">Showdown — ¿qué tenían?</p>
+              {m.jugadores.filter((p) => !p.folded).map((p) => {
+                const r = rev(p.pos);
+                const gano = ganador === p.pos;
+                return (
+                  <div key={p.pos} style={{ marginBottom: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <button
+                        type="button"
+                        onClick={() => setGanador(p.pos)}
+                        style={{ width: 62, padding: "9px 4px", borderRadius: 8, fontSize: 12, fontWeight: gano ? 600 : 400,
+                          border: `1px solid ${gano ? "var(--sage)" : "var(--line2)"}`,
+                          background: gano ? "rgba(130,168,104,.16)" : "transparent",
+                          color: gano ? "var(--sage)" : "var(--muted)" }}>
+                        {p.pos}{p.hero ? " · tú" : ""}
+                      </button>
+                      {p.hero ? (
+                        <div style={{ display: "flex", gap: 6 }}>
+                          {mias.map((c, i) => <Carta key={i} c={c} size="sm" />)}
+                        </div>
+                      ) : r.muck ? (
+                        <span className="dim" style={{ fontSize: 13, flex: 1 }}>Hizo muck</span>
+                      ) : (
+                        <div style={{ display: "flex", gap: 6 }}>
+                          {[0, 1].map((i) => (
+                            <Carta key={i} c={r.cartas[i]} size="sm"
+                              activa={pick?.t === "sd" && pick.pos === p.pos && pick.i === i}
+                              onClick={() => setPick({ t: "sd", pos: p.pos, i })} />
+                          ))}
+                        </div>
+                      )}
+                      {!p.hero && (
+                        <button type="button" className={"chip" + (r.muck ? " on" : "")}
+                          style={{ marginLeft: "auto", minHeight: 34, padding: "6px 10px", fontSize: 12 }}
+                          onClick={() => {
+                            setRevelado({ ...revelado, [p.pos]: { cartas: [null, null], muck: !r.muck } });
+                            setPick(null);
+                          }}>Muck</button>
+                      )}
+                    </div>
+                    {pick?.t === "sd" && pick.pos === p.pos && (
+                      <Picker usadas={usadas} onPick={ponerCarta} onCerrar={() => setPick(null)} />
+                    )}
+                  </div>
+                );
+              })}
+              {ganador && (
+                <p className="disp" style={{ fontSize: 20, margin: "14px 0 12px" }}>
+                  {ganador === s.heroPos ? "Ganaste" : ganador + " gana"} {money(m.bote)}
+                </p>
+              )}
             </>
           )}
           <textarea className="inp" placeholder="¿Qué dudaste? Para el video y para el profesor."
             value={nota} onChange={(e) => setNota(e.target.value)} style={{ marginBottom: 10 }} />
-          <button className="btn" onClick={guardar}>Guardar mano</button>
+          <button className="btn" onClick={guardar} disabled={!m.ganador && !ganador}
+            style={!m.ganador && !ganador ? { opacity: 0.45 } : undefined}>
+            {!m.ganador && !ganador ? "Marca quién ganó" : "Guardar mano"}
+          </button>
         </div>
       )}
 
