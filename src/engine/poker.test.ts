@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { nuevaMano, actuar, boteVivo, opcionesSubida, MESA9, MESA6 } from "./poker";
+import { nuevaMano, actuar, boteVivo, opcionesSubida, posDeAsiento, siguienteBoton, MESA9, MESA6 } from "./poker";
 
 const S13 = { nombre: "1/3", sb: 1, bb: 3 };
 const turno = (m: ReturnType<typeof nuevaMano>) => m.jugadores[m.turno]?.pos;
@@ -199,5 +199,41 @@ describe("straddle", () => {
     expect(m.straddle).toBe(null);
     expect(m.bbEfectiva).toBe(3);
     expect(turno(m)).toBe("UTG");
+  });
+});
+
+describe("asientos físicos", () => {
+  it("deriva la posición desde el botón", () => {
+    // mesa de 9, botón en el asiento 0
+    expect(posDeAsiento(0, 0, 9)).toBe("BTN");
+    expect(posDeAsiento(1, 0, 9)).toBe("SB");
+    expect(posDeAsiento(2, 0, 9)).toBe("BB");
+    expect(posDeAsiento(3, 0, 9)).toBe("UTG");
+    expect(posDeAsiento(8, 0, 9)).toBe("CO");
+  });
+
+  it("el botón avanza y mi asiento no se mueve", () => {
+    const yo = 5;
+    let boton = 0;
+    // Conforme el botón se acerca a mi asiento, mi posición se hace más temprana,
+    // luego paso por las ciegas y termino siendo el botón.
+    const esperado = ["MP", "UTG+1", "UTG", "BB", "SB", "BTN", "CO", "HJ", "LJ"];
+    for (const p of esperado) {
+      expect(posDeAsiento(yo, boton, 9)).toBe(p);
+      boton = siguienteBoton(boton, 9);
+    }
+    expect(boton).toBe(0); // dio la vuelta completa
+  });
+
+  it("da la vuelta completa en n manos", () => {
+    let boton = 3;
+    for (let i = 0; i < 9; i++) boton = siguienteBoton(boton, 9);
+    expect(boton).toBe(3);
+  });
+
+  it("funciona en 6-max", () => {
+    expect(posDeAsiento(0, 0, 6)).toBe("BTN");
+    expect(posDeAsiento(3, 0, 6)).toBe("UTG");
+    expect(posDeAsiento(5, 0, 6)).toBe("CO");
   });
 });

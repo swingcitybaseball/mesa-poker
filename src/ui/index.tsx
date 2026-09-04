@@ -32,10 +32,20 @@ const SUITS: Record<string, { g: string; red: boolean }> = {
 };
 
 export function Carta({
-  c, size = "md", onClick, activa,
-}: { c: string | null; size?: "xs" | "sm" | "md"; onClick?: () => void; activa?: boolean }) {
+  c, size = "md", onClick, activa, oculta,
+}: { c: string | null; size?: "xs" | "sm" | "md"; onClick?: () => void; activa?: boolean; oculta?: boolean }) {
   const D = size === "xs" ? [22, 30, 11, 9] : size === "sm" ? [30, 42, 14, 11] : [42, 58, 20, 15];
   const base = { width: D[0], height: D[1] } as const;
+  if (c && oculta) {
+    const Tag = onClick ? "button" : "span";
+    return (
+      <Tag className="crd dorso" onClick={onClick}
+        style={{ ...base, boxShadow: activa ? "0 0 0 2px var(--brass)" : undefined }}>
+        <span style={{ width: D[0] * 0.28, height: D[0] * 0.28, borderRadius: "50%",
+          border: "1px solid rgba(201,162,83,.65)" }} />
+      </Tag>
+    );
+  }
   if (!c)
     return (
       <button className="crd" onClick={onClick} disabled={!onClick}
@@ -67,6 +77,8 @@ export interface Asiento {
   etiqueta?: string;
   /** Cartas visibles en el asiento (las tuyas, o las de un rival en showdown). */
   cartas?: (string | null)[];
+  /** Dibujar esas cartas boca abajo. */
+  cartasOcultas?: boolean;
   /** En el HUD: si este asiento habla antes o después de ti. */
   orden?: "antes" | "despues";
 }
@@ -76,24 +88,27 @@ export interface Asiento {
  * En setup se ancla el BTN; en el HUD se ancla al hero.
  */
 export function Mesa({
-  asientos, ancla, seleccionada, turno, onTap, height = 240, centro,
+  asientos, ancla = 0, seleccionada, turno, onTap, height = 240, centro, vertical = false,
 }: {
   asientos: Asiento[];
-  ancla: number;
+  ancla?: number;
   seleccionada?: Pos;
   turno?: number;
   onTap?: (pos: Pos) => void;
   height?: number;
   centro?: React.ReactNode;
+  /** Óvalo alto (mesa de app de poker) en vez de ancho. */
+  vertical?: boolean;
 }) {
   const n = asientos.length;
+  const R = vertical ? { seat: [33, 39], mkr: [21, 26], off: 46 } : { seat: [40, 34], mkr: [25, 21], off: 38 };
   const ang = (i: number) => Math.PI / 2 + (((i - ancla + n) % n) * 2 * Math.PI) / n;
   const xy = (i: number, rx: number, ry: number) => {
     const t = ang(i);
     return [50 + rx * Math.cos(t), 50 + ry * Math.sin(t)];
   };
   return (
-    <div className="tbl" style={{ height }}>
+    <div className={"tbl" + (vertical ? " vertical" : "")} style={{ height }}>
       {centro && (
         <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
           textAlign: "center", width: "78%", zIndex: 2 }}>
@@ -102,7 +117,7 @@ export function Mesa({
       )}
       {asientos.map((a, i) => {
         if (!["BTN", "SB", "BB"].includes(a.pos)) return null;
-        const [x, y] = xy(i, 25, 21);
+        const [x, y] = xy(i, R.mkr[0], R.mkr[1]);
         const b = a.pos === "BTN";
         return (
           <div key={"m" + a.pos} className="mkr"
@@ -113,7 +128,7 @@ export function Mesa({
         );
       })}
       {asientos.map((a, i) => {
-        const [x, y] = xy(i, 40, 34);
+        const [x, y] = xy(i, R.seat[0], R.seat[1]);
         const on = seleccionada === a.pos || turno === i;
         const cls =
           "seat" +
@@ -148,7 +163,7 @@ export function Mesa({
       })}
       {asientos.map((a, i) => {
         if (!a.cartas || !a.cartas.some(Boolean)) return null;
-        const [x, y] = xy(i, 40, 34);
+        const [x, y] = xy(i, R.seat[0], R.seat[1]);
         const abajo = Math.sin(ang(i)) > 0;
         return (
           <div
@@ -157,7 +172,7 @@ export function Mesa({
               position: "absolute",
               left: `${x}%`,
               top: `${y}%`,
-              transform: `translate(-50%, -50%) translateY(${abajo ? -38 : 38}px)`,
+              transform: `translate(-50%, -50%) translateY(${abajo ? -R.off : R.off}px)`,
               display: "flex",
               gap: 3,
               zIndex: 5,
@@ -166,7 +181,7 @@ export function Mesa({
             }}
           >
             {a.cartas.map((c, k) => (
-              <Carta key={k} c={c ?? null} size="xs" />
+              <Carta key={k} c={c ?? null} size={a.hero ? "sm" : "xs"} oculta={a.cartasOcultas} />
             ))}
           </div>
         );

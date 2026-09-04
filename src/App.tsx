@@ -6,7 +6,7 @@ import Inicio from "./features/inicio/Inicio";
 import ManoTab from "./features/mano/ManoTab";
 import Tracking from "./features/tracking/Tracking";
 import Stats from "./features/stats/Stats";
-import Ajustes from "./features/ajustes/Ajustes";
+import Ajustes, { VERSION } from "./features/ajustes/Ajustes";
 import SesionDetalle from "./features/tracking/SesionDetalle";
 
 export type Tab = "inicio" | "mano" | "tracking" | "stats";
@@ -35,7 +35,7 @@ export default function App() {
           <span className="mark">MESA</span>
           <span>
             <span className="dim" style={{ fontSize: 13, marginRight: 12 }}>Bankroll {money(bankroll)}</span>
-            <button className="dim" style={{ fontSize: 13 }} onClick={() => setAjustes(true)}>Ajustes</button>
+            <button className="dim" style={{ fontSize: 13 }} onClick={() => setAjustes(true)}>Ajustes · v{VERSION}</button>
           </span>
         </header>
         {ajustes ? (

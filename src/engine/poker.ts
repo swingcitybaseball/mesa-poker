@@ -6,6 +6,20 @@ export const MESA9: Pos[] = ["SB", "BB", "UTG", "UTG+1", "MP", "LJ", "HJ", "CO",
 export const MESA6: Pos[] = ["SB", "BB", "UTG", "MP", "CO", "BTN"];
 export const CALLES = ["Preflop", "Flop", "Turn", "River", "Showdown"] as const;
 
+/**
+ * Modelo de asientos físicos: los asientos no se mueven, el botón sí.
+ * `posDeAsiento` deriva el nombre de posición a partir de la distancia al botón.
+ */
+export function posDeAsiento(asiento: number, boton: number, n: number): Pos {
+  const mesa = n === 6 ? MESA6 : MESA9;
+  const off = (asiento - boton + n) % n; // 0 = BTN, 1 = SB, 2 = BB, ...
+  return off === 0 ? "BTN" : mesa[off - 1];
+}
+
+/** El botón avanza un asiento por mano. */
+export const siguienteBoton = (boton: number, n: number) => (boton + 1) % n;
+export const anteriorBoton = (boton: number, n: number) => (boton - 1 + n) % n;
+
 export interface Stake {
   nombre: string;
   sb: number;

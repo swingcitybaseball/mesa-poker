@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, invertido, neto, horas, type Sesion } from "../../db";
-import { MESA9, MESA6, type Pos } from "../../engine/poker";
+import { posDeAsiento } from "../../engine/poker";
 import { Mesa, Chip, DESC, money, fecha, duracion } from "../../ui";
 
 export default function Tracking({ activa, sesiones, verDetalle }: { activa: Sesion | null; sesiones: Sesion[]; verDetalle: (id: number) => void }) {
@@ -13,10 +13,11 @@ function Nueva({ sesiones, verDetalle }: { sesiones: Sesion[]; verDetalle: (id: 
   const [lugar, setLugar] = useState("");
   const [stakeId, setStakeId] = useState("1/3");
   const [nJug, setNJug] = useState<6 | 9>(9);
-  const [pos, setPos] = useState<Pos>("BTN");
+  const [asiento, setAsiento] = useState(0);
+  const [juego, setJuego] = useState<"NLH" | "PLO">("NLH");
   const [buyIn, setBuyIn] = useState("300");
   const [err, setErr] = useState("");
-  const mesa = nJug === 9 ? MESA9 : MESA6;
+  const botonInicial = (asiento - 1 + nJug) % nJug;
   const cerradas = sesiones.filter((s) => s.fin).sort((a, b) => b.inicio.localeCompare(a.inicio));
 
   const empezar = async () => {
@@ -25,7 +26,7 @@ function Nueva({ sesiones, verDetalle }: { sesiones: Sesion[]; verDetalle: (id: 
     await db.sesiones.add({
       inicio: new Date().toISOString(), fin: null, lugar: lugar.trim(), stakeId, nJugadores: nJug,
       compras: [{ monto: b, ts: new Date().toISOString() }], cashOut: 0, notas: "",
-      heroPos: pos, manosJugadas: 0,
+      heroAsiento: asiento, botonAsiento: (asiento - 1 + nJug) % nJug, juego, manosJugadas: 0,
     });
   };
 
@@ -39,20 +40,37 @@ function Nueva({ sesiones, verDetalle }: { sesiones: Sesion[]; verDetalle: (id: 
           {stakes.map((k) => <Chip key={k.id} on={stakeId === k.id} onClick={() => { setStakeId(k.id); setBuyIn(String(k.buyInTipico)); }}>{k.id}</Chip>)}
         </div>
         <div className="row" style={{ marginBottom: 10 }}>
-          {([9, 6] as const).map((n) => <Chip key={n} on={nJug === n} onClick={() => { setNJug(n); if (!(n === 9 ? MESA9 : MESA6).includes(pos)) setPos("BTN"); }}>{n} jugadores</Chip>)}
+          {([9, 6] as const).map((n) => (
+            <Chip key={n} on={nJug === n} onClick={() => { setNJug(n); setAsiento(0); }}>{n} jugadores</Chip>
+          ))}
+        </div>
+        <div className="row" style={{ marginBottom: 10 }}>
+          {(["NLH", "PLO"] as const).map((j) => (
+            <Chip key={j} on={juego === j} onClick={() => setJuego(j)}>{j}</Chip>
+          ))}
         </div>
         <input className="inp" type="number" inputMode="decimal" placeholder="Buy-in" value={buyIn}
           onChange={(e) => setBuyIn(e.target.value)} />
       </div>
 
       <div className="card">
-        <p className="lab">Toca dónde estás sentado ahorita</p>
-        <Mesa asientos={mesa.map((p) => ({ pos: p }))} ancla={mesa.length - 1} seleccionada={pos} onTap={setPos} />
+        <p className="lab">Toca tu silla en la mesa</p>
+        <Mesa
+          asientos={Array.from({ length: nJug }, (_, i) => ({ pos: posDeAsiento(i, botonInicial, nJug) }))}
+          seleccionada={posDeAsiento(asiento, botonInicial, nJug)}
+          onTap={(p) => {
+            const i = Array.from({ length: nJug }, (_, k) => posDeAsiento(k, botonInicial, nJug)).indexOf(p);
+            if (i >= 0) setAsiento(i);
+          }}
+          height={330}
+          vertical
+        />
         <div className="note" style={{ marginTop: 12 }}>
-          <b className="brass">{pos}</b><br />{DESC[pos]}
+          <b className="brass">{posDeAsiento(asiento, botonInicial, nJug)}</b><br />
+          {DESC[posDeAsiento(asiento, botonInicial, nJug)]}
         </div>
         <p className="dim" style={{ fontSize: 12, margin: "12px 0 0", lineHeight: 1.6 }}>
-          Ubica al repartidor (D) y cuenta desde ahí: a su izquierda la ciega chica, luego la grande, hasta llegar a ti.
+          Escoge tu silla real. Ahí te vas a quedar toda la sesión: el botón (D) es el que gira.
         </p>
       </div>
 

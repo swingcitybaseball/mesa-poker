@@ -45,10 +45,12 @@ export interface Sesion {
   notas: string;
   estadoMental?: "bien" | "cansado" | "tilt";
   calidadMesa?: "suave" | "normal" | "dura";
-  syncCamara?: string; // ISO del instante en que arrancó la grabación
+  syncCamara?: string;
   coach?: string;
-  // HUD: posición del hero al momento; el botón se mueve con "siguiente mano"
-  heroPos: Pos;
+  /** Asientos físicos: tu silla no se mueve, el botón sí. */
+  heroAsiento: number;
+  botonAsiento: number;
+  juego: "NLH" | "PLO";
   manosJugadas: number;
 }
 
@@ -80,7 +82,7 @@ export interface Mano {
   ts: string;
   modo: "rapida" | "completa";
   pos: Pos;
-  cartas: [string | null, string | null];
+  cartas: (string | null)[];
   rivalTipo?: TipoRival;
   rivalId?: number;
   board: string[];
@@ -119,6 +121,26 @@ class MesaDB extends Dexie {
 
   constructor() {
     super("mesa");
+    this.version(2).stores({
+      stakes: "id, orden",
+      lugares: "++id, nombre",
+      rivales: "++id, lugarId, apodo",
+      sesiones: "++id, inicio, fin, stakeId, lugar",
+      manos: "++id, sesionId, ts, pos, rivalTipo, rivalId",
+      estudio: "++id, fecha",
+      ajustes: "clave",
+    }).upgrade(async (tx) => {
+      // Migración: antes se guardaba heroPos; ahora asiento físico + botón.
+      await tx.table("sesiones").toCollection().modify((s: any) => {
+        if (s.heroAsiento == null) {
+          const n = s.nJugadores ?? 9;
+          s.heroAsiento = 0;
+          s.botonAsiento = n - 1;
+          s.juego = "NLH";
+          delete s.heroPos;
+        }
+      });
+    });
     this.version(1).stores({
       stakes: "id, orden",
       lugares: "++id, nombre",

@@ -8,11 +8,14 @@ const MODELOS: [string, string][] = [
   ["claude-haiku-4-5-20251001", "Haiku 4.5"],
 ];
 
+export const VERSION = "0.7.0";
+
 export default function Ajustes({ onCerrar }: { onCerrar: () => void }) {
   const guardado = useLiveQuery(async () => ({
     key: (await db.ajustes.get("apiKey"))?.valor ?? "",
     modelo: (await db.ajustes.get("modelo"))?.valor ?? "claude-sonnet-5",
     bri: (await db.ajustes.get("bankrollInicial"))?.valor ?? "0",
+    ocultar: (await db.ajustes.get("ocultarCartas"))?.valor === "1",
   }), []);
   const [key, setKey] = useState<string | null>(null);
   const [bri, setBri] = useState<string | null>(null);
@@ -61,6 +64,21 @@ export default function Ajustes({ onCerrar }: { onCerrar: () => void }) {
       </div>
 
       <div className="card">
+        <p className="lab">Privacidad en mesa</p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+          <p className="mut" style={{ fontSize: 13, lineHeight: 1.65, margin: 0, flex: 1 }}>
+            Tapar tus cartas mientras juegas. Salen boca abajo y las destapas con un toque
+            durante 4 segundos.
+          </p>
+          <button type="button" className={"chip" + (guardado.ocultar ? " on" : "")}
+            style={{ minWidth: 74 }}
+            onClick={() => db.ajustes.put({ clave: "ocultarCartas", valor: guardado.ocultar ? "0" : "1" })}>
+            {guardado.ocultar ? "Tapadas" : "Visibles"}
+          </button>
+        </div>
+      </div>
+
+      <div className="card">
         <p className="lab">Bankroll inicial</p>
         <p className="mut" style={{ fontSize: 13, lineHeight: 1.65, margin: "0 0 10px" }}>
           Lo que tenías separado para poker antes de empezar a registrar.
@@ -82,6 +100,7 @@ export default function Ajustes({ onCerrar }: { onCerrar: () => void }) {
       </div>
 
       {aviso && <p className="dim" style={{ fontSize: 13, textAlign: "center" }}>{aviso}</p>}
+      <p className="dim" style={{ fontSize: 12, textAlign: "center", marginTop: 18 }}>MESA v{VERSION}</p>
     </>
   );
 }

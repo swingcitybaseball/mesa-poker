@@ -76,5 +76,6 @@ nav.tabs button.on { color: var(--bone); border-top-color: var(--brass); }
 .btn:active { transform: scale(.985); }
 .mkr { pointer-events: none; position: absolute; transform: translate(-50%,-50%); width: 24px; height: 24px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; z-index: 3; }
+.crd.dorso { background: var(--surf2); border-color: rgba(201,162,83,.45); align-items: center; justify-content: center; }
 .crd { border-radius: 5px; display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
   line-height: 1; flex: none; border: 1px solid var(--line2); }

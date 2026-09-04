@@ -1,46 +1,77 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Sesion } from "../../db";
 import {
   nuevaMano, actuar, opcionesSubida, boteVivo, cartasRequeridas,
-  montoStraddle, posicionesStraddle,
+  montoStraddle, posicionesStraddle, posDeAsiento,
   MESA9, MESA6, CALLES, type Mano, type Pos, type Straddle,
 } from "../../engine/poker";
+import { ganadores as calcularGanadores } from "../../engine/evaluador";
 import { Mesa, Carta, money } from "../../ui";
 import { Picker } from "../../ui/Picker";
 
 type PickSlot = { t: "mia"; i: number } | { t: "board"; i: number } | { t: "sd"; pos: Pos; i: number } | null;
-type Revelado = { cartas: [string | null, string | null]; muck: boolean };
+type Revelado = { cartas: (string | null)[]; muck: boolean };
 
-export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: () => void }) {
+export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: (avanzar?: boolean) => void }) {
   const mesa = s.nJugadores === 9 ? MESA9 : MESA6;
+  const miPos = posDeAsiento(s.heroAsiento, s.botonAsiento, s.nJugadores);
+  const nCartas = s.juego === "PLO" ? 4 : 2;
   const stake = { nombre: s.stakeId, sb: Number(s.stakeId.split("/")[0]), bb: Number(s.stakeId.split("/")[1]) };
   const stackBase = s.compras[0]?.monto ?? 300;
 
   const [str, setStr] = useState<Straddle | null>(null);
   const [arrancada, setArrancada] = useState(false);
-  const [m, setM] = useState<Mano>(() => nuevaMano(mesa, s.heroPos, stackBase, stake));
+  const [m, setM] = useState<Mano>(() => nuevaMano(mesa, miPos, stackBase, stake));
 
   const arrancar = (conStraddle: Straddle | null) => {
     setStr(conStraddle);
-    setM(nuevaMano(mesa, s.heroPos, stackBase, stake, conStraddle));
+    setM(nuevaMano(mesa, miPos, stackBase, stake, conStraddle));
     setArrancada(true);
   };
-  const [mias, setMias] = useState<[string | null, string | null]>([null, null]);
+  const [mias, setMias] = useState<(string | null)[]>(Array(nCartas).fill(null));
   const [pick, setPick] = useState<PickSlot>(null);
   const [nota, setNota] = useState("");
   const [custom, setCustom] = useState("");
   const [err, setErr] = useState("");
   const [hist, setHist] = useState<string[]>([]);
   const [ganador, setGanador] = useState<Pos | null>(null);
+  const ocultarPref = useLiveQuery(async () => (await db.ajustes.get("ocultarCartas"))?.valor === "1", []) ?? false;
+  const [espiando, setEspiando] = useState(false);
+  const tapadas = ocultarPref && !espiando;
+  useEffect(() => {
+    if (!espiando) return;
+    const t = setTimeout(() => setEspiando(false), 4000);
+    return () => clearTimeout(t);
+  }, [espiando]);
   const [revelado, setRevelado] = useState<Record<string, Revelado>>({});
-  const rev = (pos: Pos): Revelado => revelado[pos] ?? { cartas: [null, null], muck: false };
+  const rev = (pos: Pos): Revelado => revelado[pos] ?? { cartas: Array(nCartas).fill(null), muck: false };
+
+  /** Si ya hay board completo y cartas de todos los que no hicieron muck, calcula el ganador. */
+  const auto = (() => {
+    if (!m.terminada || m.ganador) return null;
+    const vivos = m.jugadores.filter((p) => !p.folded);
+    const conCartas = vivos.filter((p) => (p.hero ? mias : rev(p.pos).cartas).some(Boolean) && !rev(p.pos).muck);
+    const mucks = vivos.filter((p) => !p.hero && rev(p.pos).muck);
+    // Si todos menos uno hicieron muck, ese gana sin evaluar.
+    if (mucks.length === vivos.length - 1 && conCartas.length === 1)
+      return { pos: [conCartas[0].pos], categoria: null as string | null };
+    if (conCartas.length + mucks.length !== vivos.length) return null;
+    if (conCartas.length < 2) return null;
+    return calcularGanadores(
+      conCartas.map((p) => ({ pos: p.pos, hoyo: (p.hero ? mias : rev(p.pos).cartas).filter(Boolean) as string[] })),
+      m.board,
+      s.juego === "PLO"
+    );
+  })();
+
 
   const usadas = new Set([
     ...mias.filter(Boolean),
     ...m.board.filter((c) => c && c !== "??"),
     ...Object.values(revelado).flatMap((r) => r.cartas.filter(Boolean)),
   ] as string[]);
-  const idxHero = mesa.indexOf(s.heroPos);
+  const idxHero = mesa.indexOf(miPos);
   const act = m.turno >= 0 ? m.jugadores[m.turno] : null;
   const req = cartasRequeridas(m.calle);
   const puestas = m.board.filter((c) => c && c !== "??").length;
@@ -86,17 +117,17 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: () => v
     if (!pick) return;
     if (pick.t === "sd") {
       const r = rev(pick.pos);
-      const cartas = [...r.cartas] as [string | null, string | null];
+      const cartas = [...r.cartas];
       cartas[pick.i] = c;
       setRevelado({ ...revelado, [pick.pos]: { cartas, muck: false } });
-      setPick(pick.i === 0 ? { t: "sd", pos: pick.pos, i: 1 } : null);
+      setPick(pick.i < nCartas - 1 ? { t: "sd", pos: pick.pos, i: pick.i + 1 } : null);
       return;
     }
     if (pick.t === "mia") {
-      const n = [...mias] as [string | null, string | null];
+      const n = [...mias];
       n[pick.i] = c;
       setMias(n);
-      setPick(pick.i === 0 ? { t: "mia", i: 1 } : null);
+      setPick(pick.i < nCartas - 1 ? { t: "mia", i: pick.i + 1 } : null);
     } else {
       const b = [...m.board];
       for (let i = 0; i < pick.i; i++) if (!b[i]) b[i] = "??";
@@ -110,11 +141,11 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: () => v
   const guardar = async () => {
     const hero = m.jugadores[idxHero];
     const puesto = stackBase - hero.stack;
-    const gane = ganador === s.heroPos || m.ganador === s.heroPos;
+    const gane = m.ganador === miPos || (auto ? auto.pos.includes(miPos) : ganador === miPos);
     const netoMano = gane ? m.bote - puesto : -puesto;
     await db.manos.add({
       sesionId: s.id!, n: s.manosJugadas + 1, ts: new Date().toISOString(), modo: "completa",
-      pos: s.heroPos, cartas: mias, board: m.board, log: m.log,
+      pos: miPos, cartas: mias, board: m.board, log: m.log,
       res: hero.folded ? "Foldeé" : netoMano >= 0 ? "Gané" : "Perdí",
       neto: netoMano, nota, etiquetas: [], straddle: str ?? undefined,
       showdown: m.jugadores.filter((p) => !p.folded && !p.hero).map((p) => ({
@@ -122,7 +153,7 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: () => v
       })),
       ganador: (ganador ?? m.ganador) ?? undefined,
     });
-    onSalir();
+    onSalir(true);
   };
 
   const asientos = m.jugadores.map((p) => ({
@@ -132,6 +163,7 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: () => v
       : revelado[p.pos] && !revelado[p.pos].muck
         ? revelado[p.pos].cartas
         : undefined,
+    cartasOcultas: p.hero && tapadas,
   }));
 
   if (!arrancada) {
@@ -141,7 +173,7 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: () => v
       <>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
           <span style={{ fontSize: 15, fontWeight: 500 }}>Mano {s.manosJugadas + 1}</span>
-          <button className="dim" style={{ fontSize: 14 }} onClick={onSalir}>Salir</button>
+          <button className="dim" style={{ fontSize: 14 }} onClick={() => onSalir(false)}>Salir</button>
         </div>
         <div className="card">
           <p className="lab">¿Hubo straddle?</p>
@@ -171,7 +203,7 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: () => v
         </span>
         <span>
           <button className="dim" style={{ fontSize: 13, marginRight: 14 }} onClick={deshacer}>Deshacer</button>
-          <button className="dim" style={{ fontSize: 14 }} onClick={onSalir}>Salir</button>
+          <button className="dim" style={{ fontSize: 14 }} onClick={() => onSalir(false)}>Salir</button>
         </span>
       </div>
 
@@ -179,7 +211,8 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: () => v
         asientos={asientos}
         ancla={idxHero}
         turno={m.turno}
-        height={290}
+        height={340}
+        vertical
         centro={
           <>
             <div style={{ display: "flex", gap: 5, justifyContent: "center", marginBottom: 12 }}>
@@ -189,7 +222,7 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: () => v
                 const activaCalle = i < req;
                 if (puesta)
                   return (
-                    <Carta key={i} c={c} size="sm"
+                    <Carta key={i} c={c} size="md"
                       activa={pick?.t === "board" && pick.i === i}
                       onClick={m.calle > 0 && m.calle < 4 ? () => setPick({ t: "board", i }) : undefined} />
                   );
@@ -200,13 +233,13 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: () => v
                     disabled={!activaCalle || m.calle === 0 || m.calle >= 4}
                     onClick={() => setPick({ t: "board", i })}
                     style={{
-                      width: 30, height: 42, borderRadius: 5,
+                      width: 42, height: 58, borderRadius: 5,
                       border: `1px ${activaCalle ? "solid" : "dashed"} ${
                         pick?.t === "board" && pick.i === i ? "var(--brass)" : activaCalle ? "var(--line2)" : "rgba(58,92,76,.5)"
                       }`,
                       background: activaCalle ? "rgba(242,237,227,.06)" : "transparent",
                       color: activaCalle ? "var(--muted)" : "transparent",
-                      fontSize: 15, lineHeight: 1, padding: 0,
+                      fontSize: 17, lineHeight: 1, padding: 0,
                       boxShadow: pick?.t === "board" && pick.i === i ? "0 0 0 2px var(--brass)" : undefined,
                     }}
                   >
@@ -226,14 +259,22 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: () => v
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <span className="lab" style={{ margin: 0 }}>Tus cartas</span>
-            {[0, 1].map((i) => (
-              <Carta key={i} c={mias[i]} activa={pick?.t === "mia" && pick.i === i}
-                onClick={() => setPick({ t: "mia", i })} />
+            {Array.from({ length: nCartas }).map((_, i) => (
+              <Carta key={i} c={mias[i]} size={nCartas > 2 ? "sm" : "md"} oculta={tapadas}
+                activa={pick?.t === "mia" && pick.i === i}
+                onClick={() => (tapadas ? setEspiando(true) : setPick({ t: "mia", i }))} />
             ))}
           </div>
-          <span className="dim" style={{ fontSize: 12 }}>
-            {mias.some(Boolean) ? "ya salen en la mesa" : "toca para ponerlas"}
-          </span>
+          {ocultarPref && mias.some(Boolean) ? (
+            <button type="button" className="chip" style={{ minHeight: 36, fontSize: 12 }}
+              onClick={() => setEspiando(!espiando)}>
+              {espiando ? "Tapar" : "Ver 4s"}
+            </button>
+          ) : (
+            <span className="dim" style={{ fontSize: 12 }}>
+              {mias.some(Boolean) ? "ya salen en la mesa" : "toca para ponerlas"}
+            </span>
+          )}
         </div>
         {pick?.t === "mia" && <Picker usadas={usadas} onPick={ponerCarta} onCerrar={() => setPick(null)} />}
       </div>
@@ -318,15 +359,29 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: () => v
             <>
               <p className="lab">Todos foldearon</p>
               <p className="disp" style={{ fontSize: 22, margin: "0 0 14px" }}>
-                {m.ganador === s.heroPos ? "Ganaste" : m.ganador + " gana"} {money(m.bote)}
+                {m.ganador === miPos ? "Ganaste" : m.ganador + " gana"} {money(m.bote)}
               </p>
             </>
           ) : (
             <>
               <p className="lab">Showdown — ¿qué tenían?</p>
+              {auto && (
+                <div style={{ background: "rgba(130,168,104,.12)", border: "1px solid rgba(130,168,104,.35)",
+                  borderRadius: 10, padding: "12px 14px", marginBottom: 14 }}>
+                  <p className="sage" style={{ fontSize: 15, fontWeight: 500, margin: 0 }}>
+                    {auto.pos.length > 1
+                      ? "Bote dividido: " + auto.pos.join(" y ")
+                      : auto.pos[0] === miPos
+                        ? "Ganaste"
+                        : auto.pos[0] + " gana"}
+                    {auto.categoria ? " con " + auto.categoria.toLowerCase() : ""}
+                  </p>
+                  <p className="sub" style={{ marginTop: 4 }}>Calculado con las cartas que registraste</p>
+                </div>
+              )}
               {m.jugadores.filter((p) => !p.folded).map((p) => {
                 const r = rev(p.pos);
-                const gano = ganador === p.pos;
+                const gano = auto ? auto.pos.includes(p.pos) : ganador === p.pos;
                 return (
                   <div key={p.pos} style={{ marginBottom: 10 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -347,8 +402,8 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: () => v
                         <span className="dim" style={{ fontSize: 13, flex: 1 }}>Hizo muck</span>
                       ) : (
                         <div style={{ display: "flex", gap: 6 }}>
-                          {[0, 1].map((i) => (
-                            <Carta key={i} c={r.cartas[i]} size="sm"
+                          {Array.from({ length: nCartas }).map((_, i) => (
+                            <Carta key={i} c={r.cartas[i]} size={nCartas > 2 ? "xs" : "sm"}
                               activa={pick?.t === "sd" && pick.pos === p.pos && pick.i === i}
                               onClick={() => setPick({ t: "sd", pos: p.pos, i })} />
                           ))}
@@ -358,7 +413,7 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: () => v
                         <button type="button" className={"chip" + (r.muck ? " on" : "")}
                           style={{ marginLeft: "auto", minHeight: 34, padding: "6px 10px", fontSize: 12 }}
                           onClick={() => {
-                            setRevelado({ ...revelado, [p.pos]: { cartas: [null, null], muck: !r.muck } });
+                            setRevelado({ ...revelado, [p.pos]: { cartas: Array(nCartas).fill(null), muck: !r.muck } });
                             setPick(null);
                           }}>Muck</button>
                       )}
@@ -371,16 +426,16 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: () => v
               })}
               {ganador && (
                 <p className="disp" style={{ fontSize: 20, margin: "14px 0 12px" }}>
-                  {ganador === s.heroPos ? "Ganaste" : ganador + " gana"} {money(m.bote)}
+                  {ganador === miPos ? "Ganaste" : ganador + " gana"} {money(m.bote)}
                 </p>
               )}
             </>
           )}
           <textarea className="inp" placeholder="¿Qué dudaste? Para el video y para el profesor."
             value={nota} onChange={(e) => setNota(e.target.value)} style={{ marginBottom: 10 }} />
-          <button className="btn" onClick={guardar} disabled={!m.ganador && !ganador}
-            style={!m.ganador && !ganador ? { opacity: 0.45 } : undefined}>
-            {!m.ganador && !ganador ? "Marca quién ganó" : "Guardar mano"}
+          <button className="btn" onClick={guardar} disabled={!m.ganador && !ganador && !auto}
+            style={!m.ganador && !ganador && !auto ? { opacity: 0.45 } : undefined}>
+            {!m.ganador && !ganador && !auto ? "Marca quién ganó o registra las cartas" : "Guardar mano y seguir"}
           </button>
         </div>
       )}
