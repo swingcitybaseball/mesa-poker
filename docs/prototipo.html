@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<title>MESA</title>
+<meta name="theme-color" content="#100F0E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MESA">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#100F0E; --surf:#191817; --surf2:#232120; --line:#302D2A; --line2:#3D3934;
+  --bone:#F2EDE3; --muted:#979083; --dim:#6E675C;
+  --brass:#C9A253; --sage:#82A868; --red:#D04A41; --felt:#18241F; --feltline:#2A3B33;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--bone);
+  font-family:'Archivo',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;
+  overscroll-behavior-y:none}
+body{padding-bottom:calc(78px + env(safe-area-inset-bottom))}
+.disp{font-family:'Instrument Serif',Georgia,serif;font-weight:400;letter-spacing:-.01em}
+.wrap{max-width:520px;margin:0 auto;padding:0 16px}
+header{padding:calc(14px + env(safe-area-inset-top)) 0 14px;display:flex;justify-content:space-between;align-items:baseline}
+.mark{font-size:15px;letter-spacing:.34em;color:var(--brass);font-weight:600}
+.card{background:var(--surf);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px}
+.lab{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:0 0 10px}
+.mut{color:var(--muted)}.dim{color:var(--dim)}
+.sage{color:var(--sage)}.red{color:var(--red)}.brass{color:var(--brass)}
+.row{display:flex;flex-wrap:wrap;gap:7px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+.btn{display:block;width:100%;background:var(--brass);color:#151311;border-radius:10px;
+  padding:15px;font-size:15px;font-weight:600;min-height:50px}
+.btn.ghost{background:transparent;color:var(--bone);border:1px solid var(--line2)}
+.btn.danger{background:transparent;color:var(--red);border:1px solid rgba(208,74,65,.4)}
+.chip{padding:9px 13px;min-height:40px;border-radius:8px;border:1px solid var(--line2);
+  background:transparent;color:var(--muted);font-size:13px}
+.chip.on{border-color:var(--brass);background:rgba(201,162,83,.13);color:var(--brass);font-weight:500}
+.inp{width:100%;background:var(--surf2);border:1px solid var(--line);border-radius:9px;
+  color:var(--bone);font-size:16px;font-family:inherit;padding:12px;outline:none;min-height:48px}
+textarea.inp{line-height:1.6;resize:vertical;min-height:80px}
+.big{font-size:42px;line-height:1;margin:0}
+.stat{font-size:26px;line-height:1.1;margin:0}
+.sub{font-size:12px;color:var(--dim);margin:5px 0 0}
+.divide{border-top:1px solid var(--line);margin:14px 0;padding-top:14px}
+.cell{border-top:1px solid var(--line);padding:13px 0;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.cell:first-child{border-top:none}
+nav{position:fixed;bottom:0;left:0;right:0;background:rgba(16,15,14,.94);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-top:1px solid var(--line);display:flex;z-index:40;
+  padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;padding:14px 0 15px;font-size:11px;letter-spacing:.05em;color:var(--dim);
+  border-top:2px solid transparent;margin-top:-1px}
+nav button.on{color:var(--bone);border-top-color:var(--brass)}
+.ov{position:fixed;inset:0;background:var(--bg);z-index:60;overflow-y:auto;
+  padding-bottom:calc(30px + env(safe-area-inset-bottom))}
+.ovhead{position:sticky;top:0;background:rgba(16,15,14,.95);backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line);z-index:5;
+  padding:calc(12px + env(safe-area-inset-top)) 16px 12px;display:flex;
+  justify-content:space-between;align-items:center}
+.crd{border-radius:5px;display:inline-flex;flex-direction:column;align-items:center;
+  justify-content:center;line-height:1;flex:none;border:1px solid var(--line2)}
+.tbl{position:relative;background:var(--felt);border:1px solid var(--feltline);
+  border-radius:50%/34%}
+.seat{position:absolute;transform:translate(-50%,-50%);width:60px;min-height:44px;
+  border-radius:9px;background:var(--surf);border:1px solid var(--line2);
+  padding:6px 3px;text-align:center;font-size:11px;line-height:1.3}
+.seat.on{background:var(--brass);border-color:var(--brass);color:#151311;font-weight:600}
+.seat.hero{border-color:rgba(201,162,83,.55)}
+.seat.out{opacity:.3}
+.mkr{position:absolute;transform:translate(-50%,-50%);width:24px;height:24px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;z-index:3}
+.note{border-left:2px solid var(--brass);padding-left:12px;font-size:14px;line-height:1.65}
+.spin{width:16px;height:16px;border:2px solid var(--line2);border-top-color:var(--brass);
+  border-radius:50%;display:inline-block;animation:sp .7s linear infinite;vertical-align:-3px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.coach{font-size:15px;line-height:1.75;white-space:pre-wrap}
+.coach b{color:var(--brass);font-weight:600}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<nav id="nav"></nav>
+
+<script>
+/* ---------------- estado ---------------- */
+const KEY="mesa_v1";
+const STAKES=[{n:"1/2",sb:1,bb:2},{n:"1/3",sb:1,bb:3},{n:"2/5",sb:2,bb:5}];
+const RANKS=["A","K","Q","J","T","9","8","7","6","5","4","3","2"];
+const SUITS=[{s:"s",g:"♠",r:0},{s:"h",g:"♥",r:1},{s:"d",g:"♦",r:1},{s:"c",g:"♣",r:0}];
+const MESA9=["SB","BB","UTG","UTG+1","MP","LJ","HJ","CO","BTN"];
+const MESA6=["SB","BB","UTG","MP","CO","BTN"];
+const TIPOS=["Paga todo","Foldea mucho","Sólido","Loco"];
+const CALLES=["Preflop","Flop","Turn","River","Showdown"];
+const DESC={
+ SB:"Ciega chica. Estás a la izquierda del repartidor y pones dinero antes de ver tus cartas. Después del flop hablas de primero toda la mano.",
+ BB:"Ciega grande. Pones la apuesta más grande a ciegas. Defiendes más manos porque ya pusiste, pero juegas fuera de posición.",
+ UTG:"Primero en hablar preflop, con toda la mesa atrás. Aquí solo abres manos fuertes.",
+ "UTG+1":"Casi igual de temprano que UTG. Todavía juegas cerrado.",
+ MP:"Posición media. Ya puedes abrir un poco más ancho.",
+ LJ:"Justo antes del hijack. Empiezas a abrir pares chicos y conectores del mismo palo.",
+ HJ:"Hijack. Solo quedan tres por hablar después de ti. Aquí abres bastante.",
+ CO:"Cutoff. Solo el botón habla después de ti. Se roba mucho desde aquí.",
+ BTN:"El botón. Actúas al último en flop, turn y river. La posición que más dinero gana."
+};
+
+let S={v:1,settings:{apiKey:"",model:"claude-sonnet-5",bankrollInicial:0},sesiones:[],activa:null};
+let UI={tab:"sesion",ov:null,sim:null,q:null,det:null,coachLoading:false,coachErr:"",aviso:""};
+let timer=null;
+
+function load(){try{const r=localStorage.getItem(KEY);if(r)S=Object.assign(S,JSON.parse(r));}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){UI.aviso="No se pudo guardar";}}
+
+/* ---------------- utils ---------------- */
+const $=(id)=>document.getElementById(id);
+const esc=(s)=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const mny=(n)=>(n<0?"−$":"$")+Math.abs(Math.round(n)).toLocaleString("en-US");
+const uid=()=>Date.now()+"_"+Math.random().toString(36).slice(2,7);
+const ses=()=>S.sesiones.find(x=>x.id===S.activa);
+function deck(){const d=[];RANKS.forEach(r=>SUITS.forEach(s=>d.push(r+s.s)));return d;}
+function horas(s){const fin=s.fin?new Date(s.fin):new Date();return Math.max(0,(fin-new Date(s.inicio))/36e5);}
+function dur(s){const h=horas(s);const H=Math.floor(h);const M=Math.round((h-H)*60);return H+"h "+String(M).padStart(2,"0")+"m";}
+function invertido(s){return (s.compras||[]).reduce((a,c)=>a+c.monto,0);}
+function neto(s){return s.fin?((s.cashOut||0)-invertido(s)):0;}
+function netoTotal(){return S.sesiones.filter(s=>s.fin).reduce((a,s)=>a+neto(s),0);}
+function fecha(d){return new Date(d).toLocaleDateString("es-MX",{day:"numeric",month:"short"});}
+
+function carta(c,size,attrs){
+  const D=size==="xs"?[22,30,11,9]:size==="sm"?[30,42,14,11]:[42,58,20,15];
+  const st=`width:${D[0]}px;height:${D[1]}px;`;
+  if(!c) return `<button class="crd" ${attrs||""} style="${st}background:transparent;color:var(--dim);font-size:16px">+</button>`;
+  const su=SUITS.find(x=>x.s===c[1]);
+  return `<span class="crd" style="${st}background:var(--bone);color:${su.r?"#C0392F":"#151311"}">
+    <span style="font-size:${D[2]}px;font-weight:600">${c[0]}</span>
+    <span style="font-size:${D[3]}px">${su.g}</span></span>`;
+}
+function cartaBtn(c,size,attrs,act){
+  if(!c) return carta(null,size,attrs);
+  const D=size==="xs"?[22,30,11,9]:size==="sm"?[30,42,14,11]:[42,58,20,15];
+  const su=SUITS.find(x=>x.s===c[1]);
+  return `<button class="crd" ${attrs||""} style="width:${D[0]}px;height:${D[1]}px;background:var(--bone);
+    color:${su.r?"#C0392F":"#151311"};${act?"box-shadow:0 0 0 2px var(--brass)":""}">
+    <span style="font-size:${D[2]}px;font-weight:600">${c[0]}</span>
+    <span style="font-size:${D[3]}px">${su.g}</span></button>`;
+}
+
+/* mesa visual: devuelve HTML de asientos + marcadores */
+function mesaHTML(mesa,anclaIdx,sel,opts){
+  opts=opts||{};const n=mesa.length;let h="";
+  const pos=(i,rx,ry)=>{const j=(i-anclaIdx+n)%n;const t=Math.PI/2+j*2*Math.PI/n;
+    return [50+rx*Math.cos(t),50+ry*Math.sin(t)];};
+  mesa.forEach((p,i)=>{
+    if(!["BTN","SB","BB"].includes(p))return;
+    const[x,y]=pos(i,25,21);const b=p==="BTN";
+    h+=`<div class="mkr" style="left:${x}%;top:${y}%;background:${b?"var(--bone)":"transparent"};
+      border:1px solid ${b?"var(--bone)":"var(--brass)"};color:${b?"#151311":"var(--brass)"}">${b?"D":p}</div>`;
+  });
+  mesa.forEach((p,i)=>{
+    const[x,y]=pos(i,40,34);
+    const st=opts.jug?opts.jug[i]:null;
+    const on=sel===p, turno=opts.turno===i, out=st&&st.folded;
+    const cls="seat"+(on||turno?" on":"")+(st&&st.hero?" hero":"")+(out?" out":"");
+    const tag=opts.pick?`data-act="pos" data-v="${p}"`:"";
+    let inner=`<div style="font-weight:600">${p}</div>`;
+    if(st) inner+=`<div style="font-size:10px;opacity:.75">${st.allIn?"all-in":mny(st.stack)}</div>`;
+    else if(on) inner+=`<div style="font-size:9px;font-weight:600">TÚ</div>`;
+    let bet="";
+    if(st&&st.bet>0) bet=`<div style="position:absolute;left:${x}%;top:${y+13}%;transform:translate(-50%,-50%);
+      font-size:10px;color:var(--sage);font-weight:500">${mny(st.bet)}</div>`;
+    h+=`<button class="${cls}" ${tag} style="left:${x}%;top:${y}%">${inner}</button>${bet}`;
+  });
+  return h;
+}
+
+/* ---------------- render principal ---------------- */
+function render(){
+  if(UI.ov==="sim"){$("app").innerHTML=vSim();$("nav").style.display="none";}
+  else if(UI.ov==="quick"){$("app").innerHTML=vQuick();$("nav").style.display="none";}
+  else if(UI.ov==="det"){$("app").innerHTML=vDetalle();$("nav").style.display="none";}
+  else{
+    $("nav").style.display="flex";
+    const v={sesion:vSesion,historial:vHistorial,analisis:vAnalisis,ajustes:vAjustes}[UI.tab];
+    $("app").innerHTML=`<div class="wrap"><header><span class="mark">MESA</span>
+      <span class="dim" style="font-size:13px">Bankroll ${mny((S.settings.bankrollInicial||0)+netoTotal())}</span>
+      </header>${v()}</div>`;
+    $("nav").innerHTML=[["sesion","Sesión"],["historial","Historial"],["analisis","Análisis"],["ajustes","Ajustes"]]
+      .map(([k,t])=>`<button data-act="tab" data-v="${k}" class="${UI.tab===k?"on":""}">${t}</button>`).join("");
+  }
+  clearInterval(timer);
+  const s=ses();
+  if(s&&!s.fin&&UI.tab==="sesion"&&!UI.ov){timer=setInterval(()=>{const e=$("reloj");if(e)e.textContent=dur(s);},1000);}
+}
+
+/* ---------------- vista: sesión ---------------- */
+function vSesion(){
+  const s=ses();
+  if(!s||s.fin){
+    const ult=S.sesiones.filter(x=>x.fin)[0];
+    return `<div class="card">
+      <p class="lab">Nueva sesión</p>
+      <input class="inp" id="lugar" placeholder="Casino o lugar" style="margin-bottom:10px">
+      <div class="row" style="margin-bottom:10px">
+        ${STAKES.map((k,i)=>`<button class="chip ${i===1?"on":""}" data-act="stk" data-v="${k.n}">${k.n}</button>`).join("")}
+      </div>
+      <input class="inp" id="buyin" type="number" inputmode="decimal" placeholder="Buy-in inicial" value="300" style="margin-bottom:14px">
+      <button class="btn" data-act="empezar">Empezar sesión</button>
+    </div>
+    ${ult?`<div class="card"><p class="lab">Última sesión</p>
+      <p class="disp stat ${neto(ult)>=0?"sage":"red"}">${mny(neto(ult))}</p>
+      <p class="sub">${esc(ult.lugar||"Sin lugar")} · ${dur(ult)} · ${(ult.manos||[]).length} manos · ${fecha(ult.inicio)}</p>
+      </div>`:""}
+    ${UI.aviso?`<p class="dim" style="text-align:center;font-size:13px">${esc(UI.aviso)}</p>`:""}`;
+  }
+  const inv=invertido(s);
+  return `<div class="card" style="text-align:center;padding:22px 16px">
+      <p class="lab" style="margin-bottom:6px">${esc(s.lugar||"En juego")} · ${s.stake.n}</p>
+      <p class="disp big" id="reloj">${dur(s)}</p>
+      <div class="divide" style="display:flex">
+        <div style="flex:1"><p class="disp stat">${mny(inv)}</p><p class="sub">Invertido</p></div>
+        <div style="flex:1;border-left:1px solid var(--line)"><p class="disp stat">${(s.manos||[]).length}</p><p class="sub">Manos</p></div>
+      </div>
+    </div>
+    <div class="grid2" style="margin-bottom:12px">
+      <button class="btn" data-act="quick">Mano rápida</button>
+      <button class="btn ghost" data-act="sim">Simular mano</button>
+    </div>
+    <div class="grid2" style="margin-bottom:12px">
+      <button class="btn ghost" data-act="recompra">Recompra</button>
+      <button class="btn ghost" data-act="cerrarUI">Cerrar sesión</button>
+    </div>
+    ${UI.cerrando?`<div class="card"><p class="lab">¿Con cuánto te levantaste?</p>
+      <input class="inp" id="cashout" type="number" inputmode="decimal" placeholder="Fichas al salir" style="margin-bottom:10px">
+      <button class="btn" data-act="cerrar">Cerrar y guardar</button></div>`:""}
+    ${(s.manos||[]).length?`<div class="card"><p class="lab">Manos de esta sesión</p>
+      ${s.manos.slice().reverse().map(m=>filaMano(m)).join("")}</div>`:
+      `<div class="card" style="text-align:center;padding:28px 16px">
+        <p style="margin:0 0 6px;font-size:15px">Sin manos todavía</p>
+        <p class="sub" style="margin:0">Registra las que te dejaron dudando. Tres o cuatro por sesión bastan.</p></div>`}
+    ${UI.aviso?`<p class="dim" style="text-align:center;font-size:13px">${esc(UI.aviso)}</p>`:""}`;
+}
+
+function filaMano(m){
+  return `<div class="cell">
+    <div style="display:flex;gap:4px;align-items:center;min-width:0">
+      ${(m.cartas||[]).map(c=>carta(c,"xs")).join("")}
+      <div style="min-width:0;margin-left:6px">
+        <div style="font-size:13px">Mano ${m.n} · ${esc(m.pos||"")}</div>
+        <div class="sub" style="margin:1px 0 0">${esc(m.vtipo||"")}${m.nota?" · con nota":""}</div>
+      </div>
+    </div>
+    <span style="font-size:14px;font-weight:500" class="${m.neto>0?"sage":m.neto<0?"red":"dim"}">${m.neto?mny(m.neto):"—"}</span>
+  </div>`;
+}
+
+/* ---------------- vista: mano rápida ---------------- */
+function vQuick(){
+  const q=UI.q, s=ses(), mesa=q.nJug===9?MESA9:MESA6;
+  return `<div class="ov"><div class="ovhead">
+      <span style="font-size:15px;font-weight:500">Mano ${(s.manos||[]).length+1}</span>
+      <button data-act="cerrarOv" class="dim" style="font-size:14px">Cancelar</button></div>
+    <div class="wrap" style="padding-top:16px">
+      <div class="card">
+        <p class="lab">Tu posición</p>
+        <div class="tbl" style="height:236px;margin-bottom:12px">
+          ${mesaHTML(mesa,mesa.length-1,q.pos,{pick:true})}
+        </div>
+        <div style="background:var(--surf2);border-radius:9px;padding:12px" class="note">
+          <b>${q.pos}</b><br>${DESC[q.pos]}</div>
+      </div>
+      <div class="card">
+        <p class="lab">Tus cartas</p>
+        <div style="display:flex;gap:8px;align-items:center">
+          ${[0,1].map(i=>cartaBtn(q.cartas[i],"md",`data-act="qpick" data-v="${i}"`,q.pick===i)).join("")}
+        </div>
+        ${q.pick!=null?picker(q.usadas()):""}
+      </div>
+      <div class="card">
+        <p class="lab">Contra quién</p>
+        <div class="row">${TIPOS.map(t=>`<button class="chip ${q.vtipo===t?"on":""}" data-act="qtipo" data-v="${t}">${t}</button>`).join("")}</div>
+      </div>
+      <div class="card">
+        <p class="lab">Resultado</p>
+        <div class="row" style="margin-bottom:10px">
+          ${["Gané","Perdí","Foldeé"].map(r=>`<button class="chip ${q.res===r?"on":""}" data-act="qres" data-v="${r}">${r}</button>`).join("")}
+        </div>
+        <input class="inp" id="qmonto" type="number" inputmode="decimal" placeholder="Cuánto ganaste o perdiste" value="${q.monto||""}" style="margin-bottom:10px">
+        <textarea class="inp" id="qnota" placeholder="¿Qué dudaste? Escríbelo ahora, no después.">${esc(q.nota||"")}</textarea>
+      </div>
+      ${UI.aviso?`<p class="red" style="font-size:13px;margin:0 0 10px">${esc(UI.aviso)}</p>`:""}
+      <button class="btn" data-act="qguardar">Guardar mano</button>
+    </div></div>`;
+}
+function picker(usadas){
+  const p=UI.pickRank;
+  return `<div style="background:var(--surf2);border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:12px">
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;${p?"margin-bottom:10px":""}">
+      ${RANKS.map(r=>`<button data-act="rank" data-v="${r}" style="height:40px;border-radius:6px;
+        border:1px solid ${p===r?"var(--brass)":"var(--line2)"};background:${p===r?"rgba(201,162,83,.13)":"transparent"};
+        color:${p===r?"var(--brass)":"var(--bone)"};font-size:15px;font-weight:500">${r}</button>`).join("")}
+      <button data-act="cerrarPick" style="height:40px;border-radius:6px;border:1px solid var(--line2);color:var(--dim);font-size:15px">✕</button>
+    </div>
+    ${p?`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+      ${SUITS.map(su=>{const v=p+su.s;const ok=!usadas.has(v);
+        return `<button ${ok?`data-act="suit" data-v="${v}"`:""} style="height:46px;border-radius:6px;border:1px solid var(--line2);
+        background:${ok?"var(--bone)":"var(--surf)"};color:${ok?(su.r?"#C0392F":"#151311"):"var(--dim)"};font-size:21px">${su.g}</button>`;}).join("")}
+    </div>`:""}
+  </div>`;
+}
+
+/* ---------------- simulador ---------------- */
+function simNuevo(){
+  const s=ses();
+  return {fase:"setup",nJug:9,miPos:"BTN",stack:String(invertido(s)?300:300),stake:s.stake,
+    J:[],calle:0,bote:0,apuesta:0,turno:-1,board:[],mazo:deck(),log:[],ganador:null,
+    pick:null,nota:"",undo:[]};
+}
+function simUsadas(m){const u=new Set();m.board.forEach(c=>c&&u.add(c));
+  (m.J||[]).forEach(p=>p.hero&&p.cartas.forEach(c=>c&&u.add(c)));return u;}
+
+function vSim(){
+  const m=UI.sim,mesa=m.nJug===9?MESA9:MESA6;
+  if(m.fase==="setup"){
+    return `<div class="ov"><div class="ovhead">
+      <span style="font-size:15px;font-weight:500">Arma la mano</span>
+      <button data-act="cerrarOv" class="dim" style="font-size:14px">Cancelar</button></div>
+      <div class="wrap" style="padding-top:16px">
+      <div class="card">
+        <p class="lab">Mesa</p>
+        <div class="row">${[9,6].map(n=>`<button class="chip ${m.nJug===n?"on":""}" data-act="snj" data-v="${n}">${n} jugadores</button>`).join("")}</div>
+        <p class="lab" style="margin-top:18px">Toca dónde estás sentado</p>
+        <div class="tbl" style="height:240px;margin-bottom:12px">${mesaHTML(mesa,mesa.length-1,m.miPos,{pick:true})}</div>
+        <div style="background:var(--surf2);border-radius:9px;padding:12px" class="note"><b>${m.miPos}</b><br>${DESC[m.miPos]}</div>
+        <p class="lab" style="margin-top:18px">Stacks</p>
+        <input class="inp" id="sstack" type="number" inputmode="decimal" value="${m.stack}">
+      </div>
+      <button class="btn" data-act="srepartir">Repartir</button></div></div>`;
+  }
+  const idxH=m.J.findIndex(p=>p.hero);
+  const boteVivo=m.bote+m.J.reduce((a,p)=>a+p.bet,0);
+  const act=m.turno>=0?m.J[m.turno]:null;
+  const me=m.J.find(p=>p.hero);
+  const req=m.calle===1?3:m.calle===2?4:m.calle===3?5:0;
+  const faltanCartas=m.board.filter(Boolean).length<req;
+  return `<div class="ov"><div class="ovhead">
+    <span style="font-size:15px;font-weight:500">${CALLES[Math.min(m.calle,4)]} · ${m.stake.n}</span>
+    <span><button data-act="sundo" class="dim" style="font-size:13px;margin-right:14px">Deshacer</button>
+    <button data-act="cerrarOv" class="dim" style="font-size:14px">Salir</button></span></div>
+    <div class="wrap" style="padding-top:14px">
+    <div class="tbl" style="height:268px;margin-bottom:12px">
+      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;width:76%">
+        <div style="display:flex;gap:4px;justify-content:center;margin-bottom:8px;min-height:42px">
+          ${m.board.filter(Boolean).map(c=>carta(c,"sm")).join("")}</div>
+        <p class="sub" style="margin:0">Bote</p>
+        <p class="disp" style="font-size:24px;margin:0;color:var(--brass)">${mny(boteVivo)}</p>
+      </div>
+      ${mesaHTML(mesa,idxH,null,{jug:m.J,turno:m.turno})}
+    </div>
+    <p class="dim" style="font-size:12px;text-align:center;margin:0 0 14px;line-height:1.6">
+      D es el repartidor · SB pone ${mny(m.stake.sb)} · BB pone ${mny(m.stake.bb)}</p>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="display:flex;gap:6px">${[0,1].map(i=>cartaBtn(me.cartas[i],"md",`data-act="spick" data-v="${i}"`,m.pick&&m.pick.t==="mia"&&m.pick.i===i)).join("")}</div>
+        <button class="chip" data-act="sazarMias">Al azar</button>
+      </div>
+      ${m.pick&&m.pick.t==="mia"?picker(simUsadas(m)):""}
+    </div>
+    ${m.fase==="mano"&&faltanCartas?`<div class="card">
+      <p class="lab">Salió el ${CALLES[m.calle].toLowerCase()}</p>
+      <div style="display:flex;gap:6px;margin-bottom:10px">
+        ${Array.from({length:req}).map((_,i)=>cartaBtn(m.board[i],"md",`data-act="sbpick" data-v="${i}"`,m.pick&&m.pick.t==="b"&&m.pick.i===i)).join("")}</div>
+      ${m.pick&&m.pick.t==="b"?picker(simUsadas(m)):`<button class="btn ghost" data-act="sazarBoard">Repartir al azar</button>`}
+    </div>`:""}
+    ${m.fase==="mano"&&act&&!faltanCartas?panelAccion(m,act,boteVivo):""}
+    ${m.fase==="fin"?panelFin(m):""}
+    <div class="card"><p class="lab">Historial</p>
+      ${m.log.map((l,i)=>`<p style="font-size:13px;margin:0 0 5px;line-height:1.5;color:${i===m.log.length-1?"var(--bone)":"var(--muted)"}">${esc(l)}</p>`).join("")}</div>
+    </div></div>`;
+}
+
+function opciones(m,act,bote){
+  const falta=m.apuesta-act.bet, max=act.bet+act.stack; let o=[];
+  if(m.calle===0&&m.apuesta===m.stake.bb){
+    const limp=m.J.filter(p=>!p.folded&&p.bet===m.stake.bb&&p.pos!=="BB").length;
+    o=[{l:"Estándar",v:m.stake.bb*3+limp*m.stake.bb},{l:"4bb",v:m.stake.bb*4},{l:"5bb",v:m.stake.bb*5}];
+  } else if(m.apuesta===0){
+    o=[{l:"33%",v:bote*.33},{l:"50%",v:bote*.5},{l:"75%",v:bote*.75},{l:"Bote",v:bote}];
+  } else {
+    o=[{l:"2.5x",v:m.apuesta*2.5},{l:"3x",v:m.apuesta*3},{l:"Bote",v:m.apuesta+bote+falta}];
+  }
+  o=o.map(x=>({l:x.l,v:Math.round(x.v)})).filter(x=>x.v>m.apuesta&&x.v<max);
+  o.push({l:"All-in",v:max});
+  return o;
+}
+function panelAccion(m,act,bote){
+  return `<div class="card">
+    <p style="font-size:14px;margin:0 0 12px"><b class="brass">${act.pos}</b>
+      <span class="mut">${act.hero?" (tú)":""} · ${mny(act.stack)} atrás${m.apuesta>act.bet?" · debe "+mny(m.apuesta-act.bet):""}</span></p>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button class="btn danger" style="flex:1" data-act="sact" data-v="fold">Foldea</button>
+      ${m.apuesta>act.bet
+        ?`<button class="btn ghost" style="flex:1" data-act="sact" data-v="call">Paga ${mny(Math.min(m.apuesta-act.bet,act.stack))}</button>`
+        :`<button class="btn ghost" style="flex:1" data-act="sact" data-v="check">Pasa</button>`}
+    </div>
+    <div class="row" style="margin-bottom:10px">
+      ${opciones(m,act,bote).map(o=>`<button data-act="sraise" data-v="${o.v}" style="flex:1 1 30%;min-height:46px;
+        border:1px solid rgba(201,162,83,.4);border-radius:9px;color:var(--brass);font-size:13px;padding:8px 4px">
+        <span style="display:block;font-size:11px;color:var(--dim)">${o.l}</span>${mny(o.v)}</button>`).join("")}
+    </div>
+    <div style="display:flex;gap:8px">
+      <input class="inp" id="scustom" type="number" inputmode="decimal" placeholder="Otro monto" style="flex:1">
+      <button class="btn" style="width:auto;padding:0 20px" data-act="scustom">Sube</button>
+    </div>
+    ${UI.aviso?`<p class="red" style="font-size:13px;margin:10px 0 0">${esc(UI.aviso)}</p>`:""}
+  </div>`;
+}
+function panelFin(m){
+  const vivos=m.J.filter(p=>!p.folded);
+  if(!m.ganador) return `<div class="card"><p class="lab">Showdown — ¿quién ganó?</p>
+    <div class="row">${vivos.map(p=>`<button class="chip" data-act="sgana" data-v="${p.pos}">${p.pos}${p.hero?" (tú)":""}</button>`).join("")}</div></div>`;
+  const me=m.J.find(p=>p.hero);
+  const puesto=parseFloat(m.stack)-me.stack;
+  const n=m.ganador.includes(m.miPos)?m.bote-puesto:-puesto;
+  return `<div class="card">
+    <p class="lab">Resultado</p>
+    <p class="disp" style="font-size:26px;margin:0 0 4px">${m.ganador.join(", ")} gana ${mny(m.bote)}</p>
+    <p style="font-size:15px;margin:0 0 14px" class="${n>=0?"sage":"red"}">Tú ${n>=0?"ganaste":"perdiste"} ${mny(Math.abs(n))}</p>
+    <textarea class="inp" id="snota" placeholder="¿Qué dudaste en esta mano?" style="margin-bottom:10px">${esc(m.nota||"")}</textarea>
+    <div style="display:flex;gap:8px">
+      <button class="btn" style="flex:1" data-act="sguardar">Guardar en la sesión</button>
+      <button class="btn ghost" style="flex:1" data-act="cerrarOv">Descartar</button>
+    </div></div>`;
+}
+
+/* motor de apuestas */
+function simSnap(m){m.undo.push(JSON.stringify({J:m.J,calle:m.calle,bote:m.bote,apuesta:m.apuesta,
+  turno:m.turno,board:m.board,mazo:m.mazo,log:m.log,ganador:m.ganador,fase:m.fase}));
+  if(m.undo.length>40)m.undo.shift();}
+function simSig(J,desde,apu){for(let k=1;k<=J.length;k++){const i=(desde+k)%J.length;const p=J[i];
+  if(!p.folded&&!p.allIn&&(!p.acted||p.bet<apu))return i;}return -1;}
+function simCerrar(m){
+  m.bote+=m.J.reduce((a,p)=>a+p.bet,0);
+  m.J.forEach(p=>{p.bet=0;p.acted=false;});
+  m.apuesta=0; m.calle++;
+  if(m.calle>=4){m.turno=-1;m.fase="fin";return;}
+  const act=m.J.filter(p=>!p.folded&&!p.allIn);
+  m.turno=act.length>1?m.J.findIndex(p=>!p.folded&&!p.allIn):-1;
+  if(m.turno===-1){m.calle=4;m.fase="fin";}
+}
+function simActuar(m,tipo,monto){
+  simSnap(m); UI.aviso="";
+  const p=m.J[m.turno]; let linea="";
+  if(tipo==="fold"){p.folded=true;p.acted=true;linea=`${p.pos} foldea`;}
+  else if(tipo==="check"){p.acted=true;linea=`${p.pos} pasa`;}
+  else if(tipo==="call"){const f=Math.min(m.apuesta-p.bet,p.stack);p.stack-=f;p.bet+=f;p.acted=true;
+    if(p.stack===0)p.allIn=true;linea=`${p.pos} paga ${mny(f)}${p.allIn?" (all-in)":""}`;}
+  else{const hasta=Math.min(monto,p.bet+p.stack);p.stack-=(hasta-p.bet);
+    linea=`${p.pos} ${m.apuesta===0?"apuesta":"sube a"} ${mny(hasta)}`;
+    p.bet=hasta;p.acted=true;if(p.stack===0){p.allIn=true;linea+=" (all-in)";}
+    m.apuesta=hasta;m.J.forEach(x=>{if(x!==p&&!x.folded&&!x.allIn)x.acted=false;});}
+  m.log.push(linea);
+  const quedan=m.J.filter(x=>!x.folded);
+  if(quedan.length===1){m.bote+=m.J.reduce((a,x)=>a+x.bet,0);m.J.forEach(x=>x.bet=0);
+    m.ganador=[quedan[0].pos];m.turno=-1;m.fase="fin";
+    m.log.push(`${quedan[0].pos} gana ${mny(m.bote)} sin showdown`);return;}
+  const n=simSig(m.J,m.turno,m.apuesta);
+  if(n===-1)simCerrar(m); else m.turno=n;
+}
+
+/* ---------------- historial / detalle ---------------- */
+function vHistorial(){
+  const fin=S.sesiones.filter(s=>s.fin);
+  if(!fin.length) return `<div class="card" style="text-align:center;padding:34px 16px">
+    <p style="margin:0 0 6px;font-size:16px">Sin sesiones cerradas</p>
+    <p class="sub" style="margin:0">Aquí van a aparecer cuando cierres la primera.</p></div>`;
+  return `<div class="card">${fin.map(s=>`<div class="cell" data-act="det" data-v="${s.id}">
+    <div><div style="font-size:14px">${esc(s.lugar||"Sin lugar")} · ${s.stake.n}</div>
+      <div class="sub" style="margin:2px 0 0">${fecha(s.inicio)} · ${dur(s)} · ${(s.manos||[]).length} manos${s.coach?" · analizada":""}</div></div>
+    <span class="disp ${neto(s)>=0?"sage":"red"}" style="font-size:19px">${mny(neto(s))}</span>
+  </div>`).join("")}</div>`;
+}
+function vDetalle(){
+  const s=S.sesiones.find(x=>x.id===UI.det); if(!s)return"";
+  const h=horas(s),n=neto(s);
+  return `<div class="ov"><div class="ovhead">
+    <span style="font-size:15px;font-weight:500">${esc(s.lugar||"Sesión")}</span>
+    <button data-act="cerrarOv" class="dim" style="font-size:14px">Cerrar</button></div>
+    <div class="wrap" style="padding-top:16px">
+    <div class="card" style="text-align:center;padding:22px 16px">
+      <p class="disp big ${n>=0?"sage":"red"}">${mny(n)}</p>
+      <p class="sub">${fecha(s.inicio)} · ${s.stake.n}</p>
+      <div class="divide" style="display:flex">
+        <div style="flex:1"><p class="disp stat">${dur(s)}</p><p class="sub">Duración</p></div>
+        <div style="flex:1;border-left:1px solid var(--line)"><p class="disp stat">${h>0?mny(n/h):"—"}</p><p class="sub">Por hora</p></div>
+      </div>
+    </div>
+    ${(s.manos||[]).length?`<div class="card"><p class="lab">Manos</p>${s.manos.map(m=>filaMano(m)).join("")}</div>`:""}
+    <div class="card">
+      <p class="lab">El profesor</p>
+      ${s.coach?`<div class="coach">${fmt(s.coach)}</div>
+        <button class="btn ghost" data-act="coach" data-v="${s.id}" style="margin-top:14px">Volver a analizar</button>`
+      :UI.coachLoading?`<p class="mut" style="font-size:14px"><span class="spin"></span> Revisando tus manos…</p>`
+      :`<p class="mut" style="font-size:14px;line-height:1.6;margin:0 0 14px">Manda las manos de esta sesión a Claude para que te diga dónde estuvo la fuga.</p>
+        <button class="btn" data-act="coach" data-v="${s.id}">Pedir análisis</button>`}
+      ${UI.coachErr?`<p class="red" style="font-size:13px;margin:12px 0 0">${esc(UI.coachErr)}</p>`:""}
+    </div>
+    <button class="btn danger" data-act="borrarSes" data-v="${s.id}">Borrar sesión</button>
+    </div></div>`;
+}
+function fmt(t){return esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>");}
+
+/* ---------------- análisis ---------------- */
+function vAnalisis(){
+  const fin=S.sesiones.filter(s=>s.fin);
+  if(fin.length<2) return `<div class="card" style="text-align:center;padding:34px 16px">
+    <p style="margin:0 0 6px;font-size:16px">Faltan sesiones</p>
+    <p class="sub" style="margin:0;line-height:1.6">Los patrones no significan nada con muestras chicas.
+    Con menos de 100 horas, tu resultado dice más de la varianza que de tu juego.</p></div>`;
+  const H=fin.reduce((a,s)=>a+horas(s),0), N=netoTotal();
+  const manos=[].concat(...fin.map(s=>s.manos||[]));
+  const agg=(k)=>{const o={};manos.forEach(m=>{const v=m[k];if(!v)return;o[v]=o[v]||{n:0,neto:0};o[v].n++;o[v].neto+=m.neto||0;});return o;};
+  const pP=agg("pos"),pT=agg("vtipo");
+  let acc=0;const curva=fin.slice().reverse().map(s=>acc+=neto(s));
+  const mx=Math.max(...curva,0),mn=Math.min(...curva,0),rg=(mx-mn)||1;
+  const pts=curva.map((v,i)=>`${(i/(Math.max(curva.length-1,1)))*100},${40-((v-mn)/rg)*36}`).join(" ");
+  return `<div class="card" style="text-align:center;padding:22px 16px">
+      <p class="disp big ${N>=0?"sage":"red"}">${mny(N)}</p><p class="sub">Ganancia total</p>
+      <div class="divide" style="display:flex">
+        <div style="flex:1"><p class="disp stat">${H.toFixed(0)}h</p><p class="sub">Jugadas</p></div>
+        <div style="flex:1;border-left:1px solid var(--line)"><p class="disp stat">${H>0?mny(N/H):"—"}</p><p class="sub">Por hora</p></div>
+        <div style="flex:1;border-left:1px solid var(--line)"><p class="disp stat">${fin.length}</p><p class="sub">Sesiones</p></div>
+      </div>
+    </div>
+    <div class="card"><p class="lab">Curva de bankroll</p>
+      <svg viewBox="0 0 100 44" preserveAspectRatio="none" style="width:100%;height:110px">
+        <polyline points="${pts}" fill="none" stroke="${N>=0?"#82A868":"#D04A41"}" stroke-width="1.2"
+          vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>
+    </div>
+    ${Object.keys(pP).length?`<div class="card"><p class="lab">Neto por posición</p>
+      ${MESA9.filter(p=>pP[p]).map(p=>{const d=pP[p];
+        const m2=Math.max(...Object.values(pP).map(x=>Math.abs(x.neto)),1);
+        return `<div style="margin-bottom:11px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:13px">
+            <span>${p} <span class="dim">· ${d.n}</span></span>
+            <span class="${d.neto>=0?"sage":"red"}">${mny(d.neto)}</span></div>
+          <div style="height:4px;background:var(--surf2);border-radius:2px">
+            <div style="height:100%;width:${Math.abs(d.neto)/m2*100}%;border-radius:2px;
+              background:${d.neto>=0?"var(--sage)":"var(--red)"}"></div></div></div>`;}).join("")}
+      </div>`:""}
+    ${Object.keys(pT).length?`<div class="card"><p class="lab">Neto por tipo de rival</p>
+      ${TIPOS.filter(t=>pT[t]).map(t=>`<div class="cell"><span style="font-size:14px">${t}
+        <span class="dim">· ${pT[t].n}</span></span>
+        <span class="${pT[t].neto>=0?"sage":"red"}" style="font-size:14px">${mny(pT[t].neto)}</span></div>`).join("")}
+      <p class="mut" style="font-size:13px;margin:12px 0 0;line-height:1.6">Si pierdes contra "paga todo",
+      casi siempre es por farolear. Si pierdes contra "sólido", es por pagar de más.</p></div>`:""}`;
+}
+
+/* ---------------- ajustes ---------------- */
+function vAjustes(){
+  return `<div class="card">
+    <p class="lab">El profesor</p>
+    <p class="mut" style="font-size:13px;line-height:1.65;margin:0 0 12px">
+      Necesitas una llave de la API de Anthropic (console.anthropic.com). Se guarda solo en este
+      teléfono, nunca sale a ningún servidor mío. Cada análisis cuesta centavos.</p>
+    <input class="inp" id="apikey" type="password" placeholder="sk-ant-..." value="${esc(S.settings.apiKey)}" style="margin-bottom:10px">
+    <div class="row" style="margin-bottom:12px">
+      ${[["claude-sonnet-5","Sonnet 5"],["claude-opus-5","Opus 5"],["claude-haiku-4-5-20251001","Haiku 4.5"]]
+        .map(([v,t])=>`<button class="chip ${S.settings.model===v?"on":""}" data-act="modelo" data-v="${v}">${t}</button>`).join("")}
+    </div>
+    <button class="btn ghost" data-act="saveKey">Guardar llave</button>
+  </div>
+  <div class="card">
+    <p class="lab">Bankroll inicial</p>
+    <p class="mut" style="font-size:13px;line-height:1.65;margin:0 0 10px">Lo que tenías separado para poker antes de empezar a registrar.</p>
+    <input class="inp" id="bri" type="number" inputmode="decimal" value="${S.settings.bankrollInicial||0}" style="margin-bottom:10px">
+    <button class="btn ghost" data-act="saveBri">Guardar</button>
+  </div>
+  <div class="card">
+    <p class="lab">Tus datos</p>
+    <button class="btn ghost" data-act="export" style="margin-bottom:10px">Descargar respaldo</button>
+    <button class="btn ghost" data-act="importUI" style="margin-bottom:10px">Restaurar respaldo</button>
+    <input type="file" id="fimport" accept="application/json" style="display:none">
+    <button class="btn danger" data-act="wipe">Borrar todo</button>
+  </div>
+  ${UI.aviso?`<p class="dim" style="text-align:center;font-size:13px">${esc(UI.aviso)}</p>`:""}`;
+}
+
+/* ---------------- el profesor ---------------- */
+const SYS=`Eres un coach de poker en vivo de stakes bajos (1/2, 1/3), con años de experiencia en salas de cartas de Estados Unidos. Hablas español mexicano casual y directo, sin jerga innecesaria.
+
+Te van a pasar las manos que un jugador registró en una sesión. Tu trabajo:
+
+1. Identifica el patrón, no la mano. Una mano suelta no dice nada; busca la fuga que se repite.
+2. Sé concreto. En vez de "juega mejor tus posiciones", di "abriste tres manos desde UTG en una sesión, eso es demasiado".
+3. Separa varianza de error. Si perdió por un cooler, dilo claro y no lo trates como error. Si perdió por una decisión mala, dilo sin suavizarlo.
+4. Prioriza. Máximo tres cosas. La primera debe ser la que más dinero le cuesta.
+5. Recuerda el tamaño de muestra. Con pocas manos y pocas horas, no saques conclusiones sobre su winrate ni le sugieras subir de stakes. Dilo cuando aplique.
+6. Si los datos están incompletos (sin notas, sin board, sin tipo de rival), dilo y pídele que registre eso la próxima vez.
+
+Formato: prosa corta, párrafos de 2-3 líneas. Usa **negritas** solo para nombrar cada fuga. Máximo 350 palabras. Nada de listas numeradas largas ni relleno motivacional.`;
+
+function resumen(s){
+  const L=[`Sesión: ${s.lugar||"sin lugar"}, ciegas ${s.stake.n}, ${dur(s)}, invertido ${mny(invertido(s))}, cash out ${mny(s.cashOut||0)}, neto ${mny(neto(s))}.`,""];
+  (s.manos||[]).forEach(m=>{
+    let l=`Mano ${m.n} — posición ${m.pos||"?"}`;
+    if(m.cartas&&m.cartas.filter(Boolean).length)l+=`, cartas ${m.cartas.filter(Boolean).join(" ")}`;
+    if(m.vtipo)l+=`, rival tipo "${m.vtipo}"`;
+    if(m.board&&m.board.length)l+=`, board ${m.board.join(" ")}`;
+    l+=`. Resultado: ${m.res||"?"} ${m.neto?mny(m.neto):""}.`;
+    if(m.log&&m.log.length)l+=` Acción: ${m.log.join("; ")}.`;
+    if(m.nota)l+=` Su duda: "${m.nota}"`;
+    L.push(l);
+  });
+  if(!(s.manos||[]).length)L.push("No registró ninguna mano en esta sesión.");
+  return L.join("\n");
+}
+
+async function pedirCoach(id){
+  const s=S.sesiones.find(x=>x.id===id); if(!s)return;
+  if(!S.settings.apiKey){UI.coachErr="Falta tu llave de API. Ponla en Ajustes.";render();return;}
+  UI.coachLoading=true;UI.coachErr="";render();
+  try{
+    const r=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{"content-type":"application/json","x-api-key":S.settings.apiKey,
+        "anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({model:S.settings.model,max_tokens:1500,system:SYS,
+        messages:[{role:"user",content:resumen(s)}]})
+    });
+    if(!r.ok){const t=await r.text();throw new Error(r.status===401?"Llave inválida":
+      r.status===429?"Demasiadas peticiones, espera un momento":("Error "+r.status));}
+    const d=await r.json();
+    s.coach=(d.content||[]).filter(c=>c.type==="text").map(c=>c.text).join("\n");
+    save();
+  }catch(e){UI.coachErr=e.message||"No se pudo conectar";}
+  UI.coachLoading=false;render();
+}
+
+/* ---------------- acciones ---------------- */
+let stakeSel=STAKES[1];
+document.addEventListener("click",(e)=>{
+  const t=e.target.closest("[data-act]"); if(!t)return;
+  const a=t.dataset.act, v=t.dataset.v;
+  const m=UI.sim, q=UI.q, s=ses();
+  UI.aviso="";
+
+  if(a==="tab"){UI.tab=v;UI.cerrando=false;}
+  else if(a==="cerrarOv"){UI.ov=null;UI.sim=null;UI.q=null;UI.det=null;UI.pickRank=null;UI.coachErr="";}
+  else if(a==="stk"){stakeSel=STAKES.find(k=>k.n===v);
+    document.querySelectorAll('[data-act="stk"]').forEach(b=>b.classList.toggle("on",b.dataset.v===v));return;}
+  else if(a==="empezar"){
+    const b=parseFloat($("buyin").value)||0;
+    if(b<=0){UI.aviso="Pon el buy-in";render();return;}
+    const id=uid();
+    S.sesiones.unshift({id,inicio:new Date().toISOString(),fin:null,lugar:$("lugar").value.trim(),
+      stake:stakeSel,compras:[{monto:b,ts:new Date().toISOString()}],cashOut:0,manos:[],coach:""});
+    S.activa=id;save();
+  }
+  else if(a==="recompra"){const r=prompt("¿De cuánto la recompra?","300");const n=parseFloat(r);
+    if(n>0){s.compras.push({monto:n,ts:new Date().toISOString()});save();}}
+  else if(a==="cerrarUI"){UI.cerrando=!UI.cerrando;}
+  else if(a==="cerrar"){
+    const c=parseFloat($("cashout").value);
+    if(isNaN(c)||c<0){UI.aviso="Pon con cuánto te levantaste";render();return;}
+    s.cashOut=c;s.fin=new Date().toISOString();S.activa=null;UI.cerrando=false;
+    save();UI.det=s.id;UI.ov="det";}
+  else if(a==="quick"){UI.q={nJug:9,pos:"BTN",cartas:[null,null],vtipo:"",res:"",monto:"",nota:"",
+      pick:null,usadas(){return new Set(this.cartas.filter(Boolean));}};UI.ov="quick";UI.pickRank=null;}
+  else if(a==="sim"){UI.sim=simNuevo();UI.ov="sim";UI.pickRank=null;}
+  else if(a==="det"){UI.det=v;UI.ov="det";}
+  else if(a==="borrarSes"){if(confirm("¿Borrar esta sesión y sus manos?")){
+      S.sesiones=S.sesiones.filter(x=>x.id!==v);if(S.activa===v)S.activa=null;save();UI.ov=null;UI.det=null;}}
+  else if(a==="coach"){pedirCoach(v);return;}
+
+  /* mano rápida */
+  else if(a==="pos"){ if(UI.ov==="quick")q.pos=v; else if(m)m.miPos=v; }
+  else if(a==="qpick"){q.pick=+v;UI.pickRank=null;}
+  else if(a==="qtipo"){q.vtipo=q.vtipo===v?"":v;}
+  else if(a==="qres"){q.res=v;}
+  else if(a==="rank"){UI.pickRank=v;}
+  else if(a==="cerrarPick"){UI.pickRank=null;if(q)q.pick=null;if(m)m.pick=null;}
+  else if(a==="suit"){
+    if(UI.ov==="quick"){q.cartas[q.pick]=v;UI.pickRank=null;q.pick=q.pick===0?1:null;}
+    else{const mz=m.mazo.filter(x=>x!==v);m.mazo=mz;UI.pickRank=null;
+      if(m.pick.t==="mia"){m.J.find(p=>p.hero).cartas[m.pick.i]=v;m.pick=m.pick.i===0?{t:"mia",i:1}:null;}
+      else{m.board[m.pick.i]=v;const req=m.calle===1?3:m.calle===2?4:5;
+        m.pick=m.pick.i<req-1?{t:"b",i:m.pick.i+1}:null;}}}
+  else if(a==="qguardar"){
+    if(!q.cartas[0]||!q.cartas[1]){UI.aviso="Faltan tus cartas";render();return;}
+    if(!q.res){UI.aviso="Falta el resultado";render();return;}
+    const mo=parseFloat($("qmonto").value)||0;
+    s.manos.push({id:uid(),n:s.manos.length+1,modo:"rapida",pos:q.pos,cartas:q.cartas,
+      vtipo:q.vtipo,board:[],log:[],res:q.res,neto:q.res==="Gané"?mo:-mo,nota:$("qnota").value.trim()});
+    save();UI.ov=null;UI.q=null;}
+
+  /* simulador */
+  else if(a==="snj"){m.nJug=+v;const mesa=+v===9?MESA9:MESA6;if(!mesa.includes(m.miPos))m.miPos=mesa[mesa.length-1];}
+  else if(a==="srepartir"){
+    m.stack=$("sstack").value||"300";const base=parseFloat(m.stack)||300;
+    const mesa=m.nJug===9?MESA9:MESA6;
+    m.J=mesa.map(p=>({pos:p,hero:p===m.miPos,stack:base,bet:0,folded:false,allIn:false,acted:false,cartas:[null,null]}));
+    m.J[0].stack-=m.stake.sb;m.J[0].bet=m.stake.sb;
+    m.J[1].stack-=m.stake.bb;m.J[1].bet=m.stake.bb;
+    m.calle=0;m.bote=0;m.apuesta=m.stake.bb;m.turno=2%m.J.length;m.board=[];m.mazo=deck();
+    m.log=[`Ciegas ${m.stake.n} · ${m.nJug} jugadores`];m.ganador=null;m.fase="mano";m.undo=[];}
+  else if(a==="spick"){m.pick={t:"mia",i:+v};UI.pickRank=null;}
+  else if(a==="sbpick"){m.pick={t:"b",i:+v};UI.pickRank=null;}
+  else if(a==="sazarMias"){const h=m.J.find(p=>p.hero);
+    [0,1].forEach(i=>{if(!h.cartas[i]){const k=Math.floor(Math.random()*m.mazo.length);h.cartas[i]=m.mazo.splice(k,1)[0];}});}
+  else if(a==="sazarBoard"){const req=m.calle===1?3:m.calle===2?4:5;
+    while(m.board.filter(Boolean).length<req){const k=Math.floor(Math.random()*m.mazo.length);
+      m.board.push(m.mazo.splice(k,1)[0]);}}
+  else if(a==="sact"){simActuar(m,v);}
+  else if(a==="sraise"){simActuar(m,"raise",+v);}
+  else if(a==="scustom"){const n=parseFloat($("scustom").value);
+    if(!n||n<=m.apuesta){UI.aviso="Tiene que ser más que la apuesta actual";render();return;}
+    simActuar(m,"raise",n);}
+  else if(a==="sundo"){const u=m.undo.pop();if(u)Object.assign(m,JSON.parse(u));}
+  else if(a==="sgana"){m.ganador=[v];}
+  else if(a==="sguardar"){
+    const me=m.J.find(p=>p.hero);const puesto=parseFloat(m.stack)-me.stack;
+    const n=m.ganador.includes(m.miPos)?m.bote-puesto:-puesto;
+    s.manos.push({id:uid(),n:s.manos.length+1,modo:"completa",pos:m.miPos,cartas:me.cartas,
+      vtipo:"",board:m.board.filter(Boolean),log:m.log,res:n>=0?"Gané":"Perdí",neto:n,
+      nota:($("snota")?$("snota").value.trim():""),bote:m.bote});
+    save();UI.ov=null;UI.sim=null;}
+
+  /* ajustes */
+  else if(a==="modelo"){S.settings.model=v;save();}
+  else if(a==="saveKey"){S.settings.apiKey=$("apikey").value.trim();save();UI.aviso="Llave guardada en este teléfono";}
+  else if(a==="saveBri"){S.settings.bankrollInicial=parseFloat($("bri").value)||0;save();UI.aviso="Guardado";}
+  else if(a==="export"){
+    const b=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});
+    const u=URL.createObjectURL(b);const l=document.createElement("a");
+    l.href=u;l.download="mesa-respaldo-"+new Date().toISOString().slice(0,10)+".json";l.click();
+    setTimeout(()=>URL.revokeObjectURL(u),2000);return;}
+  else if(a==="importUI"){$("fimport").click();return;}
+  else if(a==="wipe"){if(confirm("¿Borrar todas las sesiones y manos? No se puede deshacer.")){
+      localStorage.removeItem(KEY);S={v:1,settings:{apiKey:"",model:"claude-sonnet-5",bankrollInicial:0},sesiones:[],activa:null};}}
+
+  render();
+});
+
+document.addEventListener("change",(e)=>{
+  if(e.target.id!=="fimport")return;
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{try{const d=JSON.parse(r.result);
+      if(!d.sesiones)throw 0;S=Object.assign(S,d);save();UI.aviso="Respaldo restaurado";}
+    catch(x){UI.aviso="Ese archivo no sirve";}render();};
+  r.readAsText(f);
+});
+
+/* ---------------- arranque ---------------- */
+load();render();
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+}
+</script>
+</body>
+</html>
