@@ -53,9 +53,16 @@ nav.tabs button.on { color: var(--bone); border-top-color: var(--brass); }
 
 /* mesa visual */
 .tbl { position: relative; background: var(--felt); border: 1px solid var(--feltline); border-radius: 50% / 34%; }
-.seat { position: absolute; transform: translate(-50%,-50%); width: 64px; min-height: 48px; border-radius: 9px;
-  background: var(--surf); border: 1px solid var(--line2); padding: 7px 3px; text-align: center;
-  font-size: 11px; line-height: 1.3; z-index: 4; touch-action: manipulation; }
+.seat { position: absolute; transform: translate(-50%,-50%); width: 62px; min-height: 46px; border-radius: 10px;
+  background: var(--surf); border: 1px solid var(--line2); padding: 6px 4px; text-align: center;
+  font-size: 11px; line-height: 1.25; z-index: 4; touch-action: manipulation; }
+.seat.ancho { width: 66px; z-index: 6; }
+.seat .stk { font-family: var(--mono); font-size: 9.5px; opacity: .7; margin-top: 1px; }
+.insignia { position: absolute; top: -7px; right: -7px; width: 19px; height: 19px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; font-family: var(--mono);
+  font-size: 8px; font-weight: 600; background: var(--surf2); color: var(--brass);
+  border: 1px solid rgba(201,162,83,.7); }
+.insignia.d { background: var(--bone); color: #151311; border-color: var(--bone); }
 .seat:active { transform: translate(-50%,-50%) scale(.96); }
 .seat.on { background: var(--brass); border-color: var(--brass); color: #151311; font-weight: 600; }
 .seat.hero { border-color: rgba(201,162,83,.55); }
@@ -77,8 +84,7 @@ nav.tabs button.on { color: var(--bone); border-top-color: var(--brass); }
 .hud-strip .k { font-size: 11px; color: var(--dim); margin-top: 5px; }
 .btn.grande { padding: 18px; font-size: 16px; min-height: 58px; border-radius: 14px; }
 .btn:active { transform: scale(.985); }
-.mkr { pointer-events: none; position: absolute; transform: translate(-50%,-50%); width: 24px; height: 24px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; z-index: 3; }
+
 .crd.dorso { background: var(--surf2); border-color: rgba(201,162,83,.45); align-items: center; justify-content: center; }
 .crd { border-radius: 5px; display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
   line-height: 1; flex: none; border: 1px solid var(--line2); }

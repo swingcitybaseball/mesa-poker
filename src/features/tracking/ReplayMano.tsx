@@ -74,18 +74,18 @@ export default function ReplayMano({ m, s }: { m: Mano; s: Sesion }) {
         asientos={asientos}
         ancla={ancla >= 0 ? ancla : 0}
         turno={f.turno}
-        height={330}
+        height={370}
         vertical
         centro={
           <>
-            <div style={{ display: "flex", gap: 5, justifyContent: "center", marginBottom: 10, minHeight: 58 }}>
+            <div style={{ display: "flex", gap: 4, justifyContent: "center", marginBottom: 8, minHeight: 42 }}>
               {Array.from({ length: 5 }).map((_, k) => {
                 const c = f.board[k];
                 return c ? (
-                  <Carta key={k} c={c} size="md" />
+                  <Carta key={k} c={c} size="sm" />
                 ) : (
-                  <span key={k} style={{ width: 42, height: 58, borderRadius: 5,
-                    border: "1px dashed rgba(58,92,76,.5)", display: "inline-block" }} />
+                  <span key={k} style={{ width: 30, height: 42, borderRadius: 4,
+                    border: "1px dashed rgba(58,92,76,.55)", display: "inline-block" }} />
                 );
               })}
             </div>
@@ -93,7 +93,7 @@ export default function ReplayMano({ m, s }: { m: Mano; s: Sesion }) {
               <Pila monto={f.bote} size={15} max={4} />
             </div>
             <p className="sub" style={{ margin: 0 }}>Bote</p>
-            <p className="disp" style={{ fontSize: 27, margin: 0, color: "var(--brass)" }}>{money(f.bote)}</p>
+            <p className="disp" style={{ fontSize: 24, margin: 0, color: "var(--brass)" }}>{money(f.bote)}</p>
           </>
         }
       />

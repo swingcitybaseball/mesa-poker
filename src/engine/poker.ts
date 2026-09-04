@@ -63,14 +63,16 @@ export const mny = (n: number) =>
 export function nuevaMano(
   mesa: Pos[],
   heroPos: Pos,
-  stack: number,
+  stack: number | Partial<Record<Pos, number>>,
   stake: Stake,
   straddle: Straddle | null = null
 ): Mano {
+  const stackDe = (pos: Pos) =>
+    typeof stack === "number" ? stack : Math.max(0, stack[pos] ?? 0);
   const jugadores: Jugador[] = mesa.map((pos) => ({
     pos,
     hero: pos === heroPos,
-    stack,
+    stack: stackDe(pos),
     bet: 0,
     folded: false,
     allIn: false,

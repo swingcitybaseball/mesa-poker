@@ -62,7 +62,7 @@ function Nueva({ sesiones, verDetalle }: { sesiones: Sesion[]; verDetalle: (id: 
             const i = Array.from({ length: nJug }, (_, k) => posDeAsiento(k, botonInicial, nJug)).indexOf(p);
             if (i >= 0) setAsiento(i);
           }}
-          height={330}
+          height={360}
           vertical
         />
         <div className="note" style={{ marginTop: 12 }}>

@@ -63,7 +63,7 @@ export default function ManoTab({ activa, ir }: { activa: Sesion | null; ir: (t:
           const i = asientos.findIndex((a) => a.pos === pos);
           if (i >= 0) db.sesiones.update(s.id!, { heroAsiento: i });
         }}
-        height={330}
+        height={360}
         vertical
       />
 

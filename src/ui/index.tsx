@@ -102,7 +102,7 @@ export function Mesa({
   vertical?: boolean;
 }) {
   const n = asientos.length;
-  const R = vertical ? { seat: [33, 39], mkr: [21, 26], off: 46 } : { seat: [40, 34], mkr: [25, 21], off: 38 };
+  const R = vertical ? { seat: [37, 38] } : { seat: [41, 35] };
   const ang = (i: number) => Math.PI / 2 + (((i - ancla + n) % n) * 2 * Math.PI) / n;
   const xy = (i: number, rx: number, ry: number) => {
     const t = ang(i);
@@ -112,32 +112,23 @@ export function Mesa({
     <div className={"tbl" + (vertical ? " vertical" : "")} style={{ height }}>
       {centro && (
         <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
-          textAlign: "center", width: "78%", zIndex: 2 }}>
+          textAlign: "center", width: "50%", zIndex: 2 }}>
           {centro}
         </div>
       )}
       {asientos.map((a, i) => {
-        if (!["BTN", "SB", "BB"].includes(a.pos)) return null;
-        const [x, y] = xy(i, R.mkr[0], R.mkr[1]);
-        const b = a.pos === "BTN";
-        return (
-          <div key={"m" + a.pos} className="mkr"
-            style={{ left: `${x}%`, top: `${y}%`, background: b ? "var(--bone)" : "transparent",
-              border: `1px solid ${b ? "var(--bone)" : "var(--brass)"}`, color: b ? "#151311" : "var(--brass)" }}>
-            {b ? "D" : a.pos}
-          </div>
-        );
-      })}
-      {asientos.map((a, i) => {
         const [x, y] = xy(i, R.seat[0], R.seat[1]);
         const on = seleccionada === a.pos || turno === i;
+        const conCartas = !!a.cartas?.some(Boolean);
         const cls =
           "seat" +
           (on ? " on" : "") +
           (a.hero ? " hero" : "") +
           (a.folded ? " out" : "") +
+          (conCartas ? " ancho" : "") +
           (!on && a.orden === "antes" ? " antes" : "") +
           (!on && a.orden === "despues" ? " despues" : "");
+        const insignia = ["BTN", "SB", "BB"].includes(a.pos) ? a.pos : null;
         return (
           <button
             key={a.pos}
@@ -147,49 +138,41 @@ export function Mesa({
             onClick={onTap ? () => onTap(a.pos) : undefined}
             aria-pressed={seleccionada === a.pos}
           >
-            <div style={{ fontWeight: 600 }}>{a.pos}</div>
+            <div style={{ fontWeight: 700 }}>{a.pos}</div>
             {a.stack != null ? (
-              <div style={{ fontSize: 10, opacity: 0.75 }}>{a.allIn ? "all-in" : "$" + Math.round(a.stack)}</div>
+              <div className="stk">{a.allIn ? "all-in" : "$" + Math.round(a.stack)}</div>
             ) : a.hero ? (
-              <div style={{ fontSize: 9, fontWeight: 600 }}>TÚ</div>
+              <div style={{ fontSize: 9, fontWeight: 700 }}>TÚ</div>
             ) : a.etiqueta ? (
-              <div style={{ fontSize: 9, opacity: 0.8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.etiqueta}</div>
+              <div className="stk" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {a.etiqueta}
+              </div>
             ) : null}
+
+            {conCartas && (
+              <span style={{ display: "flex", gap: 2, justifyContent: "center", marginTop: 4 }}>
+                {a.cartas!.map((c, k) => (
+                  <Carta key={k} c={c ?? null} size="xs" oculta={a.cartasOcultas} />
+                ))}
+              </span>
+            )}
+
+            {insignia && (
+              <span className={"insignia" + (insignia === "BTN" ? " d" : "")}>
+                {insignia === "BTN" ? "D" : insignia}
+              </span>
+            )}
+
             {a.bet ? (
-              <div style={{ position: "absolute", left: "50%", bottom: -19, transform: "translateX(-50%)",
+              <span style={{ position: "absolute", left: "50%", bottom: -20, transform: "translateX(-50%)",
                 display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
                 <Pila monto={a.bet} size={11} max={3} />
                 <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--sage)", fontWeight: 500 }}>
                   ${Math.round(a.bet)}
                 </span>
-              </div>
+              </span>
             ) : null}
           </button>
-        );
-      })}
-      {asientos.map((a, i) => {
-        if (!a.cartas || !a.cartas.some(Boolean)) return null;
-        const [x, y] = xy(i, R.seat[0], R.seat[1]);
-        const abajo = Math.sin(ang(i)) > 0;
-        return (
-          <div
-            key={"c" + a.pos}
-            style={{
-              position: "absolute",
-              left: `${x}%`,
-              top: `${y}%`,
-              transform: `translate(-50%, -50%) translateY(${abajo ? -R.off : R.off}px)`,
-              display: "flex",
-              gap: 3,
-              zIndex: 5,
-              opacity: a.folded ? 0.35 : 1,
-              pointerEvents: "none",
-            }}
-          >
-            {a.cartas.map((c, k) => (
-              <Carta key={k} c={c ?? null} size={a.hero ? "sm" : "xs"} oculta={a.cartasOcultas} />
-            ))}
-          </div>
         );
       })}
     </div>

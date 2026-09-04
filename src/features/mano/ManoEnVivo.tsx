@@ -23,11 +23,16 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: (avanza
 
   const [str, setStr] = useState<Straddle | null>(null);
   const [arrancada, setArrancada] = useState(false);
+  const [stacks, setStacks] = useState<Partial<Record<Pos, number>>>({});
+  const [editaStacks, setEditaStacks] = useState(false);
   const [m, setM] = useState<Mano>(() => nuevaMano(mesa, miPos, stackBase, stake));
 
   const arrancar = (conStraddle: Straddle | null) => {
     setStr(conStraddle);
-    setM(nuevaMano(mesa, miPos, stackBase, stake, conStraddle));
+    const conf: Partial<Record<Pos, number>> = {};
+    mesa.forEach((p) => (conf[p] = stacks[p] ?? stackBase));
+    setStacks(conf);
+    setM(nuevaMano(mesa, miPos, conf, stake, conStraddle));
     setArrancada(true);
   };
   const [mias, setMias] = useState<(string | null)[]>(Array(nCartas).fill(null));
@@ -35,7 +40,7 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: (avanza
   const [nota, setNota] = useState("");
   const [custom, setCustom] = useState("");
   const [err, setErr] = useState("");
-  const [hist, setHist] = useState<string[]>([]);
+  const [hist, setHist] = useState<{ n: number; estado: string }[]>([]);
   const [ganador, setGanador] = useState<Pos | null>(null);
   const ocultarPref = useLiveQuery(async () => (await db.ajustes.get("ocultarCartas"))?.valor === "1", []) ?? false;
   const [espiando, setEspiando] = useState(false);
@@ -74,20 +79,32 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: (avanza
   ] as string[]);
   const idxHero = mesa.indexOf(miPos);
   const act = m.turno >= 0 ? m.jugadores[m.turno] : null;
-  const req = cartasRequeridas(m.calle);
+  // Si hubo all-in y se llegó a showdown, se reparten las cinco.
+  const req = m.ganador ? cartasRequeridas(m.calle) : m.calle >= 4 ? 5 : cartasRequeridas(m.calle);
   const puestas = m.board.filter((c) => c && c !== "??").length;
   const faltanCartas = puestas < req;
 
   const pot = boteVivo(m);
 
-  const snap = () => setHist((h) => [...h.slice(-40), JSON.stringify(m)]);
+  const snap = () => setHist((h) => [...h.slice(-60), { n: m.log.length, estado: JSON.stringify(m) }]);
   const deshacer = () => {
     const h = [...hist];
     const last = h.pop();
     if (!last) return;
-    setM(JSON.parse(last));
+    setM(JSON.parse(last.estado));
     setHist(h);
     setGanador(null);
+    setErr("");
+  };
+
+  /** Rebobina hasta justo antes de la línea `i` del historial. */
+  const rebobinar = (i: number) => {
+    const k = hist.findIndex((x) => x.n === i);
+    if (k < 0) return;
+    setM(JSON.parse(hist[k].estado));
+    setHist(hist.slice(0, k));
+    setGanador(null);
+    setRevelado({});
     setErr("");
   };
 
@@ -193,6 +210,42 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: (avanza
             Si fue de otro monto, lo ajustas con "Subió" en la primera acción.
           </p>
         </div>
+
+        <div className="card">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <p className="lab" style={{ margin: 0 }}>Stacks · todos con {money(stackBase)}</p>
+            <button type="button" className="chip" style={{ minHeight: 34, fontSize: 12 }}
+              onClick={() => setEditaStacks(!editaStacks)}>
+              {editaStacks ? "Listo" : "Cambiar"}
+            </button>
+          </div>
+          {editaStacks && (
+            <>
+              <p className="mut" style={{ fontSize: 13, lineHeight: 1.6, margin: "12px 0 10px" }}>
+                Pon lo que traía cada quien. Los que dejes vacíos usan {money(stackBase)}.
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                {mesa.map((p) => (
+                  <div key={p} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span className="dim" style={{ fontFamily: "var(--mono)", fontSize: 11, width: 38 }}>
+                      {p}{p === miPos ? "*" : ""}
+                    </span>
+                    <input className="inp" type="number" inputMode="decimal"
+                      style={{ minHeight: 40, fontSize: 14, padding: "8px 9px" }}
+                      placeholder={String(stackBase)}
+                      value={stacks[p] ?? ""}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setStacks({ ...stacks, [p]: v === "" ? undefined : Number(v) });
+                      }} />
+                  </div>
+                ))}
+              </div>
+              <button className="btn ghost" style={{ marginTop: 12, fontSize: 13 }}
+                onClick={() => setStacks({})}>Todos a {money(stackBase)}</button>
+            </>
+          )}
+        </div>
       </>
     );
   }
@@ -213,7 +266,7 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: (avanza
         asientos={asientos}
         ancla={idxHero}
         turno={m.turno}
-        height={340}
+        height={370}
         vertical
         centro={
           <>
@@ -226,22 +279,22 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: (avanza
                   return (
                     <Carta key={i} c={c} size="md"
                       activa={pick?.t === "board" && pick.i === i}
-                      onClick={m.calle > 0 && m.calle < 4 ? () => setPick({ t: "board", i }) : undefined} />
+                      onClick={m.calle > 0 ? () => setPick({ t: "board", i }) : undefined} />
                   );
                 return (
                   <button
                     key={i}
                     type="button"
-                    disabled={!activaCalle || m.calle === 0 || m.calle >= 4}
+                    disabled={!activaCalle || m.calle === 0}
                     onClick={() => setPick({ t: "board", i })}
                     style={{
-                      width: 42, height: 58, borderRadius: 5,
+                      width: 30, height: 42, borderRadius: 4,
                       border: `1px ${activaCalle ? "solid" : "dashed"} ${
                         pick?.t === "board" && pick.i === i ? "var(--brass)" : activaCalle ? "var(--line2)" : "rgba(58,92,76,.5)"
                       }`,
                       background: activaCalle ? "rgba(242,237,227,.06)" : "transparent",
                       color: activaCalle ? "var(--muted)" : "transparent",
-                      fontSize: 17, lineHeight: 1, padding: 0,
+                      fontSize: 14, lineHeight: 1, padding: 0,
                       boxShadow: pick?.t === "board" && pick.i === i ? "0 0 0 2px var(--brass)" : undefined,
                     }}
                   >
@@ -254,7 +307,7 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: (avanza
               <Pila monto={pot} size={15} max={4} />
             </div>
             <p className="sub" style={{ margin: 0 }}>Bote</p>
-            <p className="disp" style={{ fontSize: 27, margin: 0, color: "var(--brass)" }}>{money(pot)}</p>
+            <p className="disp" style={{ fontSize: 24, margin: 0, color: "var(--brass)" }}>{money(pot)}</p>
           </>
         }
       />
@@ -285,10 +338,12 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: (avanza
       </div>
 
       {/* board */}
-      {faltanCartas && m.calle > 0 && m.calle < 4 && (
+      {faltanCartas && m.calle > 0 && (
         <div className="card">
           <p className="lab" style={{ marginBottom: pick?.t === "board" ? 0 : 10 }}>
-            Salió el {CALLES[m.calle].toLowerCase()} — toca las cartas en la mesa
+            {m.calle >= 4
+              ? "Corre el board — pon las cartas que faltan"
+              : "Salió el " + CALLES[m.calle].toLowerCase() + " — toca las cartas en la mesa"}
           </p>
           {pick?.t === "board" ? (
             <Picker usadas={usadas} onPick={ponerCarta} onCerrar={() => setPick(null)} />
@@ -370,6 +425,11 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: (avanza
           ) : (
             <>
               <p className="lab">Showdown — ¿qué tenían?</p>
+              {!auto && faltanCartas && (
+                <p className="mut" style={{ fontSize: 13, lineHeight: 1.6, margin: "0 0 14px" }}>
+                  Faltan cartas del board. Ponlas arriba y calculo el ganador solo.
+                </p>
+              )}
               {auto && (
                 <div style={{ background: "rgba(130,168,104,.12)", border: "1px solid rgba(130,168,104,.35)",
                   borderRadius: 10, padding: "12px 14px", marginBottom: 14 }}>
@@ -446,10 +506,30 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: (avanza
       )}
 
       <div className="card" style={{ marginBottom: 0 }}>
-        <p className="lab">Lo que pasó</p>
-        {m.log.map((l, i) => (
-          <p key={i} style={{ fontSize: 13, margin: "0 0 5px", lineHeight: 1.5, color: i === m.log.length - 1 ? "var(--bone)" : "var(--muted)" }}>{l}</p>
-        ))}
+        <p className="lab">Lo que pasó — toca una línea para volver ahí</p>
+        {m.log.map((l, i) => {
+          const puede = hist.some((x) => x.n === i);
+          return (
+            <button
+              key={i}
+              type="button"
+              disabled={!puede}
+              onClick={() => rebobinar(i)}
+              style={{
+                display: "block", width: "100%", textAlign: "left", padding: "5px 8px",
+                borderRadius: 6, fontSize: 13, lineHeight: 1.5, marginBottom: 2,
+                background: "transparent",
+                color: i === m.log.length - 1 ? "var(--bone)" : "var(--muted)",
+                cursor: puede ? "pointer" : "default",
+                border: "1px solid transparent",
+              }}
+              onMouseOver={(e) => { if (puede) e.currentTarget.style.borderColor = "var(--line2)"; }}
+              onMouseOut={(e) => (e.currentTarget.style.borderColor = "transparent")}
+            >
+              {l}
+            </button>
+          );
+        })}
       </div>
     </>
   );

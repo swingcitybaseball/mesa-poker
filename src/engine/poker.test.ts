@@ -237,3 +237,22 @@ describe("asientos físicos", () => {
     expect(posDeAsiento(5, 0, 6)).toBe("CO");
   });
 });
+
+describe("stacks distintos por jugador", () => {
+  it("cada quien arranca con lo suyo", () => {
+    const m = nuevaMano(MESA9, "BTN", { SB: 120, BB: 500, UTG: 80, BTN: 300 }, S13);
+    expect(m.jugadores[0].stack).toBe(119); // SB puso 1
+    expect(m.jugadores[1].stack).toBe(497); // BB puso 3
+    expect(m.jugadores[2].stack).toBe(80);
+    expect(m.jugadores[8].stack).toBe(300);
+  });
+
+  it("el corto no puede pagar más de lo que tiene", () => {
+    const m = nuevaMano(MESA9, "BTN", { UTG: 40, BTN: 300, SB: 300, BB: 300 }, S13);
+    actuar(m, "raise", 40); // UTG all-in
+    expect(m.jugadores[2].allIn).toBe(true);
+    for (let i = 0; i < 5; i++) actuar(m, "fold");
+    actuar(m, "call"); // BTN paga
+    expect(m.jugadores[8].bet).toBe(40);
+  });
+});
