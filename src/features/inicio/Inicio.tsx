@@ -1,7 +1,26 @@
-import { neto, netoVivo, horas, type Sesion } from "../../db";
+import { db, neto, netoVivo, horas, type Sesion } from "../../db";
 import { posDeAsiento } from "../../engine/poker";
 import { money, duracion, fecha } from "../../ui";
 import type { Tab } from "../../App";
+
+export async function descargarRespaldo() {
+  const data = {
+    version: 1,
+    fecha: new Date().toISOString(),
+    sesiones: await db.sesiones.toArray(),
+    manos: await db.manos.toArray(),
+    rivales: await db.rivales.toArray(),
+    ajustes: (await db.ajustes.toArray()).filter((a) => a.clave !== "apiKey"),
+  };
+  const b = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const u = URL.createObjectURL(b);
+  const a = document.createElement("a");
+  a.href = u;
+  a.download = `mesa-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(u), 2000);
+  await db.ajustes.put({ clave: "ultimoRespaldo", valor: new Date().toISOString() });
+}
 
 export default function Inicio({ activa, sesiones, ir }: { activa: Sesion | null; sesiones: Sesion[]; ir: (t: Tab) => void }) {
   const cerradas = sesiones.filter((s) => s.fin).sort((a, b) => b.inicio.localeCompare(a.inicio));
@@ -40,6 +59,17 @@ export default function Inicio({ activa, sesiones, ir }: { activa: Sesion | null
           <div style={{ flex: 1, borderLeft: "1px solid var(--line)" }}><p className="disp stat">{cerradas.length}</p><p className="sub">Sesiones</p></div>
         </div>
       </div>
+
+      {cerradas.length > 0 && (
+        <div className="card">
+          <p className="lab">Respaldo</p>
+          <p className="mut" style={{ fontSize: 13, lineHeight: 1.6, margin: "0 0 12px" }}>
+            Tus {cerradas.length} sesiones viven solo en este dispositivo. Si borras el
+            navegador o cambias de teléfono, se pierden.
+          </p>
+          <button className="btn ghost" onClick={descargarRespaldo}>Descargar mis datos</button>
+        </div>
+      )}
 
       {ultima && (
         <div className="card">

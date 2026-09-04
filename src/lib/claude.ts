@@ -1,4 +1,5 @@
 import { db, type Mano, type Sesion, invertido, neto, horas } from "../db";
+import { clasificar } from "../engine/clasificar";
 
 const MODELO_POR_DEFECTO = "claude-sonnet-5";
 
@@ -48,6 +49,13 @@ function describirMano(m: Mano, s: Sesion): string {
   if (m.ganador) L.push(`Ganó: ${m.ganador}`);
   L.push(`Resultado: ${m.res}, neto ${m.neto >= 0 ? "+" : ""}$${Math.round(m.neto)}`);
   if (m.nota) L.push(`Lo que dudé: "${m.nota}"`);
+
+  const c = clasificar({
+    pos: m.pos, cartas: m.cartas, board: m.board, log: m.log, neto: m.neto,
+    plo: s.juego === "PLO", showdown: m.showdown, ganador: m.ganador,
+  });
+  if (c.hechos.length) L.push(`\nHechos verificados por la app (no los contradigas):\n${c.hechos.map((h) => "  - " + h).join("\n")}`);
+  if (c.etiquetas.length) L.push(`Clasificación automática: ${c.etiquetas.join(", ")}`);
   return L.join("\n");
 }
 
@@ -58,8 +66,9 @@ Te van a pasar una mano registrada. Tu trabajo:
 1. Di primero si la mano se jugó bien o mal, sin rodeos. Si fue un cooler o varianza pura, dilo claro y no lo trates como error.
 2. Señala la calle exacta donde estuvo la decisión importante. No repases toda la mano: ve al punto donde se ganó o se perdió el dinero.
 3. Si hubo error, nombra el concepto: sizing, selección de rango, posición, tipo de rival, control del bote.
-4. Si faltan datos (no se registró el board, ni el tipo de rival, ni las cartas del rival), dilo en una línea y analiza con lo que hay. No inventes lo que no está.
-5. Una mano suelta no dice nada del jugador. No saques conclusiones sobre su nivel ni sobre su winrate.
+4. La app ya calculó hechos objetivos con las cartas y el board: si fue farol, si fue apuesta de valor, si dejaste valor sin cobrar, si fue cooler. Esos hechos son ciertos. Úsalos como base y explica el porqué; nunca los contradigas ni inventes otros.
+5. Si faltan datos (no se registró el board, ni el tipo de rival, ni las cartas del rival), dilo en una línea y analiza con lo que hay. No inventes lo que no está.
+6. Una mano suelta no dice nada del jugador. No saques conclusiones sobre su nivel ni sobre su winrate.
 
 Formato: prosa corta, 2 o 3 párrafos de 2-3 líneas. **Negritas** solo para nombrar el concepto clave. Máximo 200 palabras. Nada de listas ni de relleno motivacional.`;
 
@@ -96,6 +105,7 @@ Te van a pasar todas las manos que un jugador registró en una sesión. Tu traba
 4. Prioriza. Máximo tres cosas, y la primera debe ser la que más dinero cuesta.
 5. Respeta el tamaño de muestra: con pocas manos y pocas horas no concluyas nada sobre su winrate ni le sugieras cambiar de stake.
 6. Si los registros están incompletos, dilo y pídele qué registrar la próxima vez.
+7. Cada mano trae una clasificación automática calculada con las cartas reales (Farol, Apuesta de valor, Valor no cobrado, Pagué de más, Pasivo con mano fuerte, Cooler, Fold disciplinado). Cuenta cuántas veces aparece cada una y basa tu análisis en ese conteo, no en impresiones.
 
 Formato: prosa corta, párrafos de 2-3 líneas. **Negritas** solo para nombrar cada fuga. Máximo 300 palabras.`;
 

@@ -7,6 +7,7 @@ import {
   MESA9, MESA6, CALLES, type Mano, type Pos, type Straddle,
 } from "../../engine/poker";
 import { ganadores as calcularGanadores } from "../../engine/evaluador";
+import { clasificar } from "../../engine/clasificar";
 import { Mesa, Carta, money } from "../../ui";
 import { Pila } from "../../ui/Fichas";
 import { Picker } from "../../ui/Picker";
@@ -142,6 +143,24 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: (avanza
     }
   };
 
+  /** Postflop, cuando la ronda se va en checks. */
+  const pasanHastaMi = () => {
+    snap();
+    let x = structuredClone(m);
+    let guard = 0;
+    const heroYaPaso = x.jugadores[x.turno]?.hero;
+    while (x.turno >= 0 && !x.terminada && x.apuesta === 0 && guard++ < 12) {
+      const esHero = x.jugadores[x.turno].hero;
+      if (esHero && !heroYaPaso) break;
+      x = actuar(x, "check");
+      if (esHero && heroYaPaso) {
+        // el hero pasó primero: seguimos hasta que cierre la ronda
+      }
+      if (x.calle !== m.calle) break;
+    }
+    setM(x);
+  };
+
   /** Foldea a todos hasta que le toque al hero. El atajo más usado en mesa. */
   const foldeanHastaMi = () => {
     snap();
@@ -187,7 +206,15 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: (avanza
       sesionId: s.id!, n: s.manosJugadas + 1, ts: new Date().toISOString(), modo: "completa",
       pos: miPos, cartas: mias, board: m.board, log: m.log,
       res: hero.folded ? "Foldeé" : netoMano >= 0 ? "Gané" : "Perdí",
-      neto: netoMano, nota, etiquetas: [], straddle: str ?? undefined,
+      neto: netoMano, nota,
+      etiquetas: clasificar({
+        pos: miPos, cartas: mias, board: m.board, log: m.log, neto: netoMano,
+        plo: s.juego === "PLO",
+        showdown: m.jugadores.filter((p) => !p.folded && !p.hero).map((p) => ({
+          pos: p.pos, cartas: rev(p.pos).cartas, muck: rev(p.pos).muck,
+        })),
+      }).etiquetas,
+      straddle: str ?? undefined,
       showdown: m.jugadores.filter((p) => !p.folded && !p.hero).map((p) => ({
         pos: p.pos, cartas: rev(p.pos).cartas, muck: rev(p.pos).muck,
       })),
@@ -459,6 +486,11 @@ export default function ManoEnVivo({ s, onSalir }: { s: Sesion; onSalir: (avanza
           {!act.hero && m.calle === 0 && (
             <button className="btn ghost" style={{ marginBottom: 10, fontSize: 13 }} onClick={foldeanHastaMi}>
               Foldean hasta mí ↓
+            </button>
+          )}
+          {m.calle > 0 && m.apuesta === 0 && (
+            <button className="btn ghost" style={{ marginBottom: 10, fontSize: 13 }} onClick={pasanHastaMi}>
+              {act.hero ? "Todos pasan (paso yo también)" : "Pasan hasta mí ↓"}
             </button>
           )}
 

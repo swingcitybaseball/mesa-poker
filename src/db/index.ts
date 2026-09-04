@@ -56,26 +56,17 @@ export interface Sesion {
   manosJugadas: number;
 }
 
-export type Etiqueta =
-  | "Farol contra station"
-  | "Pagué de más"
-  | "Sizing chico con mano fuerte"
-  | "Abrí muy ancho fuera de posición"
-  | "No cobré valor delgado"
-  | "Tilt"
-  | "Cooler"
-  | "Buena jugada";
-
-export const ETIQUETAS: Etiqueta[] = [
-  "Farol contra station",
+export type { Etiqueta } from "../engine/clasificar";
+export const ETIQUETAS = [
+  "Farol",
+  "Semifarol",
+  "Apuesta de valor",
+  "Valor no cobrado",
   "Pagué de más",
-  "Sizing chico con mano fuerte",
-  "Abrí muy ancho fuera de posición",
-  "No cobré valor delgado",
-  "Tilt",
+  "Pasivo con mano fuerte",
   "Cooler",
-  "Buena jugada",
-];
+  "Fold disciplinado",
+] as const;
 
 export interface Mano {
   id?: number;
@@ -92,7 +83,7 @@ export interface Mano {
   res: "Gané" | "Perdí" | "Foldeé";
   neto: number;
   nota: string;
-  etiquetas: Etiqueta[];
+  etiquetas: import("../engine/clasificar").Etiqueta[];
   straddle?: { pos: Pos; monto: number };
   showdown?: { pos: Pos; cartas: (string | null)[]; muck: boolean }[];
   ganador?: Pos;

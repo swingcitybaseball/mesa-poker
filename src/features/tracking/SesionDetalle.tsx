@@ -68,6 +68,17 @@ export default function SesionDetalle({ s, onCerrar }: { s: Sesion; onCerrar: ()
                     <div className="sub" style={{ margin: "1px 0 0" }}>
                       {m.board.filter((c) => c !== "??").join(" ") || "sin board"}{m.nota ? " · con nota" : ""}
                     </div>
+                    {m.etiquetas?.length ? (
+                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 4 }}>
+                        {m.etiquetas.map((t) => (
+                          <span key={t} style={{ fontFamily: "var(--mono)", fontSize: 9.5, letterSpacing: ".04em",
+                            padding: "2px 6px", borderRadius: 4, border: "1px solid var(--line2)",
+                            color: t === "Cooler" ? "var(--muted)" : t === "Farol" || t === "Pagué de más" || t === "Valor no cobrado" || t === "Pasivo con mano fuerte" ? "var(--red)" : "var(--sage)" }}>
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
                 <span style={{ fontSize: 14, fontWeight: 500 }} className={m.neto > 0 ? "sage" : m.neto < 0 ? "red" : "dim"}>

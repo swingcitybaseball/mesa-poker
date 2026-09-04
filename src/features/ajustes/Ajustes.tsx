@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "../../db";
+import { descargarRespaldo } from "../inicio/Inicio";
 
 const MODELOS: [string, string][] = [
   ["claude-sonnet-5", "Sonnet 5"],
@@ -8,7 +9,7 @@ const MODELOS: [string, string][] = [
   ["claude-haiku-4-5-20251001", "Haiku 4.5"],
 ];
 
-export const VERSION = "1.3.0";
+export const VERSION = "1.4.0";
 
 export default function Ajustes({ onCerrar }: { onCerrar: () => void }) {
   const guardado = useLiveQuery(async () => ({
@@ -22,19 +23,6 @@ export default function Ajustes({ onCerrar }: { onCerrar: () => void }) {
   const [aviso, setAviso] = useState("");
   if (!guardado) return null;
 
-  const exportar = async () => {
-    const data = {
-      sesiones: await db.sesiones.toArray(),
-      manos: await db.manos.toArray(),
-      rivales: await db.rivales.toArray(),
-      ajustes: (await db.ajustes.toArray()).filter((a) => a.clave !== "apiKey"),
-    };
-    const b = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const u = URL.createObjectURL(b);
-    const a = document.createElement("a");
-    a.href = u; a.download = "mesa-respaldo-" + new Date().toISOString().slice(0, 10) + ".json"; a.click();
-    setTimeout(() => URL.revokeObjectURL(u), 2000);
-  };
 
   return (
     <>
@@ -96,7 +84,7 @@ export default function Ajustes({ onCerrar }: { onCerrar: () => void }) {
         <p className="mut" style={{ fontSize: 13, lineHeight: 1.65, margin: "0 0 10px" }}>
           Todo vive en este dispositivo. Baja un respaldo cada tanto.
         </p>
-        <button className="btn ghost" onClick={exportar}>Descargar respaldo</button>
+        <button className="btn ghost" onClick={descargarRespaldo}>Descargar respaldo</button>
       </div>
 
       {aviso && <p className="dim" style={{ fontSize: 13, textAlign: "center" }}>{aviso}</p>}
